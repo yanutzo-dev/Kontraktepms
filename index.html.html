@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KTK — PM Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d0d0d;color:#e8e2da;min-height:100vh}
+.topnav{display:flex;align-items:center;gap:0;background:#111;border-bottom:0.5px solid #1e1e1e;padding:0 1rem;position:sticky;top:0;z-index:100;overflow-x:auto}
+.nav-logo{width:30px;height:30px;border-radius:7px;background:#C4622D;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;margin-right:14px;flex-shrink:0}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:13px 14px;font-size:13px;cursor:pointer;color:#555;border-bottom:2px solid transparent;border-top:none;border-left:none;border-right:none;background:none;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.nav-btn:hover{color:#ccc}
+.nav-btn.active{color:#C4622D;border-bottom-color:#C4622D;font-weight:500}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.notif-btn{position:relative;background:none;border:none;cursor:pointer;color:#444;padding:6px;border-radius:6px;font-size:16px}
+.notif-btn:hover{color:#ccc;background:#1a1a1a}
+.notif-badge{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#f05252;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.main{padding:1.25rem;max-width:1400px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.page-title{font-size:18px;font-weight:500;color:#F5E6DC}
+.page-sub{font-size:11px;color:#444;margin-top:2px}
+.add-btn{display:flex;align-items:center;gap:5px;font-size:13px;padding:7px 14px;cursor:pointer;border-radius:7px;background:#C4622D;color:#fff;border:none;transition:background .15s;flex-shrink:0}
+.add-btn:hover{background:#a84f24}
+/* CARDS */
+.scards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.sc{background:#111;border-radius:10px;padding:1rem 1.25rem;border:0.5px solid #1a1a1a;position:relative;overflow:hidden;transition:border-color .2s}
+.sc:hover{border-color:#2a2a2a}
+.sc-accent{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:10px 0 0 10px}
+.sc-val{font-size:32px;font-weight:700;color:#F5E6DC;line-height:1;margin-bottom:4px}
+.sc-lbl{font-size:11px;color:#444;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.sc-sub{font-size:11px;color:#333;margin-top:6px}
+/* DASHBOARD */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1rem}
+@media(max-width:900px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
+.dash-card{background:#111;border-radius:10px;padding:1.1rem 1.25rem;border:0.5px solid #1a1a1a}
+.dash-card-title{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.9rem;font-weight:600}
+.alert-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #161616}
+.alert-item:last-child{border-bottom:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.alert-txt{flex:1;font-size:12px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert-days{font-size:12px;font-weight:700;flex-shrink:0}
+.pm-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.pm-name{font-size:12px;color:#888;width:70px;flex-shrink:0}
+.pm-prog-wrap{flex:1;height:5px;background:#1a1a1a;border-radius:3px;overflow:hidden}
+.pm-prog{height:100%;border-radius:3px;transition:width .5s}
+.pm-pct{font-size:11px;color:#444;width:30px;text-align:right;flex-shrink:0}
+.crit-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid #161616}
+.crit-row:last-child{border-bottom:none}
+.pm-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:0.5px solid #1e1e1e}
+.pm-row:last-child{border-bottom:none}
+.pm-name{font-size:13px;color:#ccc;flex:1}
+.pm-prog-wrap{flex:0 0 90px;background:#1a1a1a;border-radius:10px;height:6px;overflow:hidden}
+.pm-prog{height:100%;border-radius:10px}
+.pm-pct{font-size:12px;color:#555;flex:0 0 35px;text-align:right}
+.alert-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid #1e1e1e}
+.alert-item:last-child{border-bottom:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.alert-txt{font-size:12px;color:#ccc;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert-days{font-size:11px;font-weight:600;white-space:nowrap}
+.chart-wrap{position:relative;height:180px}
+/* FILTERS */
+.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.filters-lbl{font-size:11px;color:#555;white-space:nowrap}
+.fb{padding:4px 11px;font-size:12px;border-radius:6px;border:0.5px solid #222;background:#161616;color:#666;cursor:pointer;transition:all .15s;white-space:nowrap}
+.fb:hover{border-color:#444;color:#ccc}
+.fb.active{background:#C4622D22;border-color:#C4622D;color:#F5E6DC}
+.search-wrap{position:relative;max-width:220px;flex:1;min-width:120px}
+.search-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#444;font-size:14px;pointer-events:none}
+.srch{width:100%;background:#161616;border:0.5px solid #222;border-radius:7px;color:#e8e2da;padding:6px 10px 6px 30px;font-size:13px}
+.srch:focus{outline:none;border-color:#C4622D}
+/* SECTIONS */
+/* SECCIONES */
+.proj-section{margin-bottom:1rem;border-radius:10px;overflow:hidden;border:0.5px solid #1a1a1a}
+.section-hdr{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#111;cursor:pointer;user-select:none;transition:background .15s}
+.section-hdr:hover{background:#161616}
+.section-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.section-ttl{font-size:14px;font-weight:600;color:#e8e2da;flex:1;letter-spacing:.01em}
+.section-count{font-size:11px;font-weight:600;color:#888;background:#0e0e0e;padding:3px 10px;border-radius:20px;border:0.5px solid #222}
+.section-chev{font-size:13px;color:#333;transition:transform .2s;flex-shrink:0}
+.section-chev.open{transform:rotate(90deg)}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.08em;padding:8px 14px;text-align:left;border-bottom:0.5px solid #1a1a1a;background:#0a0a0a;white-space:nowrap}
+td{padding:10px 14px;border-bottom:0.5px solid #141414;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#141414;cursor:pointer}
+.pname{font-weight:600;color:#F5E6DC;font-size:13px;display:flex;align-items:center;gap:8px;line-height:1.3}
+.pname-dot{width:3px;height:28px;border-radius:2px;flex-shrink:0}
+.psub{font-size:11px;color:#3a3a3a;margin-top:2px;padding-left:11px}
+.pm-av{width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.cg{background:#0a2018;color:#4dd68a;border:0.5px solid #1a4a30}
+.cy{background:#221800;color:#f0b429;border:0.5px solid #3a2800}
+.cr{background:#2a0808;color:#ff7070;border:0.5px solid #5a1515}
+.cgr{background:#141414;color:#3a3a3a;border:0.5px solid #1e1e1e}
+.spill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.spill::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.spill:hover{filter:brightness(1.25)}
+.sp-ab{background:#0a2018;color:#4dd68a;border:0.5px solid #1a4a30}.sp-ab::before{background:#4dd68a}
+.sp-ce{background:#141414;color:#444;border:0.5px solid #1e1e1e}.sp-ce::before{background:#444}
+.sp-pa{background:#221800;color:#f0b429;border:0.5px solid #3a2800}.sp-pa::before{background:#f0b429}
+.sp-ma{background:#0a1525;color:#5b8ae8;border:0.5px solid #1a3560}.sp-ma::before{background:#5b8ae8}
+.dc{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap}
+.dc-ok{background:#0a1a10;color:#4dd68a;border:0.5px solid #1a3a20}
+.dc-w{background:#1e1600;color:#e8c45b;border:0.5px solid #2e2400}
+.dc-ov{background:#2a0808;color:#ff7070;border:0.5px solid #5a1515}
+.dc-no{color:#252525;padding:4px 0;font-size:11px}
+.bx{background:none;border:none;cursor:pointer;color:#2a2a2a;padding:5px;border-radius:6px;font-size:13px;transition:all .15s}
+.bx:hover{color:#C4622D;background:#C4622D18}
+/* PROG BAR PROYECTO */
+.p-prog-wrap{height:2px;background:#1a1a1a;border-radius:1px;margin-top:4px;width:80px}
+.p-prog{height:100%;border-radius:1px;transition:width .3s}
+/* INLINE EDIT */
+.editable{cursor:pointer;position:relative}
+.editable:hover{filter:brightness(1.3)}
+.inline-dd{position:fixed;background:#1e1e1e;border:0.5px solid #333;border-radius:8px;z-index:500;padding:4px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.inline-dd div{padding:7px 12px;font-size:13px;color:#ccc;cursor:pointer;border-radius:5px}
+.inline-dd div:hover{background:#C4622D22;color:#F5E6DC}
+.inline-date{position:fixed;background:#1e1e1e;border:0.5px solid #333;border-radius:8px;z-index:500;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.inline-date input{background:#111;border:0.5px solid #333;border-radius:6px;color:#e8e2da;padding:6px 10px;font-size:13px;font-family:inherit;outline:none;width:160px}
+.inline-date input:focus{border-color:#C4622D}
+/* GANTT */
+.g-wrap{overflow-x:auto;padding-bottom:8px}
+.g-container{min-width:800px}
+.g-header{display:flex;border-bottom:0.5px solid #1e1e1e;margin-bottom:4px;padding-bottom:4px}
+.g-lbl-col{flex-shrink:0;font-size:10px;color:#333}
+.g-months{flex:1;display:flex;position:relative;overflow:hidden}
+.g-month{position:absolute;font-size:10px;color:#444;white-space:nowrap;transform:translateX(-50%)}
+.g-row{display:flex;align-items:center;margin-bottom:4px}
+.g-lbl{font-size:12px;color:#bbb;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:10px;flex-shrink:0}
+.g-track{flex:1;background:#161616;border-radius:3px;position:relative;height:22px;min-width:0}
+.g-bar{position:absolute;top:3px;height:16px;border-radius:3px;min-width:5px;cursor:pointer;transition:filter .15s}
+.g-bar:hover{filter:brightness(1.3)}
+.g-today{position:absolute;top:-4px;bottom:-4px;width:1.5px;background:#C4622D;z-index:5;border-radius:1px}
+.g-today-lbl{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:#C4622D;white-space:nowrap;font-weight:600}
+/* PROGRAMA DE OBRA GANTT */
+.prog-gantt{overflow-x:auto}
+.pg-container{min-width:900px}
+.pg-phase{margin-bottom:1rem}
+.pg-phase-hdr{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;background:#161616;margin-bottom:4px;border:0.5px solid #1e1e1e}
+.pg-phase-hdr:hover{background:#1a1a1a}
+.pg-phase-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pg-phase-ttl{font-size:13px;font-weight:500;color:#F5E6DC;flex:1}
+.pg-phase-chev{font-size:13px;color:#333;transition:transform .2s}
+.pg-phase-chev.open{transform:rotate(90deg)}
+.pg-row{display:flex;align-items:center;margin-bottom:3px}
+.pg-lbl{font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;flex-shrink:0}
+.pg-code{font-size:10px;color:#444;padding-right:6px;flex-shrink:0;width:40px}
+.pg-track{flex:1;background:#1a1a1a;border-radius:3px;position:relative;height:20px;min-width:0}
+.pg-bar{position:absolute;top:2px;height:16px;border-radius:3px;min-width:4px}
+.pg-resp{font-size:10px;color:#555;padding-left:8px;flex-shrink:0;width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-sem-v{background:#1a3d2b;color:#5be89a}
+.pg-sem-a{background:#3d2f00;color:#f0c45b}
+.pg-sem-r{background:#5a0a0a;color:#ff9090}
+
+/* COMENTARIOS */
+.cmt-area{background:#0a0a0a;border-top:0.5px solid #1a1a1a;padding:10px 14px 10px 42px}
+.cmt-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.cmt-item{background:#141414;border:0.5px solid #1e1e1e;border-radius:6px;padding:7px 10px}
+.cmt-meta{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.cmt-author{font-size:10px;font-weight:600;color:#C4622D}
+.cmt-time{font-size:10px;color:#333}
+.cmt-del{margin-left:auto;background:none;border:none;color:#2a2a2a;cursor:pointer;font-size:12px;padding:0 2px;line-height:1}
+.cmt-del:hover{color:#f05252}
+.cmt-text{font-size:12px;color:#888;line-height:1.5}
+.cmt-input-row{display:flex;gap:6px;align-items:flex-end}
+.cmt-inp{flex:1;background:#141414;border:0.5px solid #222;border-radius:6px;color:#ccc;padding:6px 10px;font-size:12px;font-family:inherit;resize:none;outline:none;min-height:32px;max-height:80px;line-height:1.4}
+.cmt-inp:focus{border-color:#C4622D55}
+.cmt-inp::placeholder{color:#333}
+.cmt-send{background:#C4622D;border:none;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap;transition:background .15s;height:32px}
+.cmt-send:hover{background:#a8522a}
+.cmt-toggle{background:none;border:none;cursor:pointer;color:#2a2a2a;padding:3px 4px;border-radius:4px;font-size:14px;transition:all .15s;position:relative}
+.cmt-toggle:hover{color:#C4622D;background:#C4622D15}
+.cmt-toggle.has-cmts{color:#C4622D88}
+.cmt-badge{position:absolute;top:-3px;right:-3px;background:#C4622D;color:#fff;border-radius:50%;width:12px;height:12px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* TASKS */
+.pm-tabs{display:flex;gap:6px;margin-bottom:1rem;overflow-x:auto;padding-bottom:2px}
+.ptab{display:flex;align-items:center;gap:7px;padding:6px 14px 6px 8px;font-size:13px;cursor:pointer;color:#555;border-radius:20px;border:0.5px solid #1e1e1e;background:#161616;white-space:nowrap;transition:all .15s}
+.ptab:hover{border-color:#333;color:#bbb}
+.ptab.active{background:#C4622D18;border-color:#C4622D;color:#F5E6DC}
+.col-hdr{display:grid;grid-template-columns:36px 3fr 1.2fr 95px 110px 115px 55px;gap:0;padding:6px 8px 6px 14px;border-bottom:0.5px solid #222;margin-bottom:4px}
+.col-hdr span{font-size:11px;font-weight:500;color:#ccc;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;user-select:none}
+.col-hdr span:hover{color:#fff}
+.proj-block{margin-bottom:1.1rem}
+.proj-hdr{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background .1s}
+.proj-hdr:hover{background:#161616}
+.proj-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.proj-ttl{font-size:14px;font-weight:500;color:#F5E6DC;flex:1}
+.proj-meta{display:flex;align-items:center;gap:8px}
+.crit-b{background:#5a0a0a;color:#ff9090;font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;border:0.5px solid #aa2222}
+.prog-wrap{width:60px;background:#1e1e1e;border-radius:10px;height:5px;overflow:hidden}
+.prog-bar{height:100%;border-radius:10px;transition:width .4s}
+.pcount{font-size:12px;color:#444}
+.chev{font-size:14px;color:#333;transition:transform .2s;flex-shrink:0}
+.chev.open{transform:rotate(90deg)}
+.task-tbl{border-left:3px solid transparent}
+.trow{display:grid;grid-template-columns:36px 3fr 1.2fr 95px 110px 115px 55px;gap:0;align-items:center;padding:7px 8px 7px 14px;border-bottom:0.5px solid #161616;transition:background .1s}
+.trow:hover{background:#161616}
+.trow.done-r{opacity:.4}
+.tcb{accent-color:#C4622D;cursor:pointer;width:15px;height:15px}
+.ttxt{font-size:13px;color:#ddd;line-height:1.3;padding-right:8px}
+.ttxt.done{text-decoration:line-through;color:#444}
+.hc{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;transition:filter .15s;border:0.5px solid transparent}
+.hc:hover{filter:brightness(1.3)}
+.hc-tender{background:#0d2238;color:#5bc4e8;border-color:#1a3a5a}
+.hc-obra{background:#1a0d00;color:#C4622D;border-color:#3a1a00}
+.hc-postventa{background:#1e0d2a;color:#c87ae8;border-color:#3a1a4a}
+.hc-mant{background:#0d2518;color:#5be89a;border-color:#1a4a2a}
+.hc-admin{background:#221800;color:#f0b429;border-color:#3a2800}
+.hc-diseno{background:#1a0a20;color:#e87ac8;border-color:#3a1a38}
+.hc-ot{background:#1a1a1a;color:#555;border-color:#222}
+.pc{display:inline-flex;align-items:center;padding:4px 10px;border-radius:5px;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;transition:filter .15s}
+.pc:hover{filter:brightness(1.3)}
+.pc-cr{background:#5a0a0a;color:#ffaaaa;border:1px solid #8a2222}
+.pc-al{background:#5a3000;color:#ffd080;border:1px solid #8a5500}
+.pc-me{background:#1a2a0d;color:#a0d070;border:1px solid #3a5a1a}
+.pc-ba{background:#1a1a1a;color:#555;border:0.5px solid #222}
+.sc-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:filter .15s}
+.sc-chip:hover{filter:brightness(1.25)}
+.sca{background:#0d2a1a;color:#5be89a;border:0.5px solid #1a4a28}
+.scs{background:#2a1e00;color:#e8c45b;border:0.5px solid #4a3800}
+.sch{background:#161616;color:#333;border:0.5px solid #1e1e1e}
+.tact{display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.trow:hover .tact{opacity:1}
+.add-il{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 50px;color:#333;font-size:13px;cursor:pointer;border-top:0.5px solid #161616;transition:all .1s}
+.add-il:hover{color:#C4622D;background:#161616}
+.il-in{flex:1;background:transparent;border:none;color:#e8e2da;font-size:13px;outline:none;font-family:inherit}
+.il-in::placeholder{color:#2a2a2a}
+.sum-bar{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;padding:9px 14px;background:#161616;border-radius:8px;border:0.5px solid #1e1e1e}
+.sb2{font-size:13px;color:#555}.sb2 b{font-weight:500}
+.archive-toggle{display:flex;align-items:center;gap:6px;padding:6px 14px 6px 50px;color:#333;font-size:12px;cursor:pointer;border-top:0.5px solid #111;margin-top:4px}
+.archive-toggle:hover{color:#666}
+.archive-section{padding-left:14px;border-left:3px solid #1e1e1e;margin-left:18px;margin-top:4px}
+/* NOTIF */
+.notif-panel{display:none;position:fixed;top:52px;right:12px;width:300px;background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;z-index:200;padding:1rem;max-height:360px;overflow-y:auto}
+.notif-panel.open{display:block}
+.notif-ttl{font-size:13px;font-weight:500;color:#F5E6DC;margin-bottom:.75rem}
+.notif-item{padding:7px 0;border-bottom:0.5px solid #1e1e1e;font-size:12px}
+.notif-item:last-child{border-bottom:none}
+.notif-proj{color:#C4622D;font-weight:500}
+.notif-msg{color:#666;margin-top:2px}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#1a1a1a;border-radius:12px;border:0.5px solid #2a2a2a;padding:1.4rem;width:360px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:500;margin:0 0 1rem;color:#F5E6DC}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:12px;color:#777;margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;background:#111;border:0.5px solid #2a2a2a;border-radius:6px;color:#e8e2da;padding:7px 10px;font-size:13px;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#C4622D}
+.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap}
+.bc{padding:7px 14px;font-size:13px;cursor:pointer;border-radius:6px;background:#1e1e1e;color:#666;border:0.5px solid #222}
+.bs{padding:7px 14px;font-size:13px;cursor:pointer;border-radius:6px;background:#C4622D;color:#fff;border:none}
+.bs:hover{background:#a84f24}
+.bdel{padding:7px 14px;font-size:13px;cursor:pointer;border-radius:6px;background:#3a1010;color:#ff9090;border:0.5px solid #5a1a1a}
+</style>
+</head>
+<body>
+<div class="topnav">
+  <div class="nav-logo">K</div>
+  <button class="nav-btn active" id="nb-dash" onclick="goPage('dash',this)"><i class="ti ti-dashboard"></i> Dashboard</button>
+  <button class="nav-btn" id="nb-0" onclick="goPage(0,this)"><i class="ti ti-layout-grid"></i> Proyectos</button>
+  
+  <button class="nav-btn" id="nb-2" onclick="goPage(2,this)"><i class="ti ti-chart-gantt"></i> Gantt</button>
+  <button class="nav-btn" id="nb-3" onclick="goPage(3,this)"><i class="ti ti-checklist"></i> Tareas</button>
+  <button class="nav-btn" id="nb-coord" onclick="openCoord(this)"><i class="ti ti-lock"></i> Coordinación</button>
+  <button class="nav-btn" id="nb-admin" onclick="goPage('admin',this)" style="margin-left:auto"><i class="ti ti-settings"></i> Admin</button>
+  <button class="nav-btn" id="nb-4" onclick="goPage(4,this)"><i class="ti ti-calendar-time"></i> Programa de Obra</button>
+  <div class="nav-right">
+    <button class="notif-btn" onclick="toggleNotif()" id="notif-btn">
+      <i class="ti ti-bell"></i>
+      <span class="notif-badge" id="notif-count" style="display:none">0</span>
+    </button>
+  </div>
+</div>
+
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-ttl"><i class="ti ti-bell"></i> Alertas</div>
+  <div id="notif-list"></div>
+</div>
+
+<div class="main">
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dash">
+    <div class="page-header">
+      <div><div class="page-title">Dashboard</div><div class="page-sub" id="date-lbl"></div></div>
+    </div>
+    <div class="scards" id="dash-cards"></div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-card-title">Estado de proyectos</div>
+        <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Proyectos por PM</div>
+        <div class="chart-wrap"><canvas id="chart-tenders"></canvas></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Proyectos por tipo</div>
+        <div class="chart-wrap"><canvas id="chart-tipo"></canvas></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Próximos a vencer</div>
+        <div id="dash-alerts-list"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Avance de tareas por PM</div>
+        <div id="dash-pm-list"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Tareas críticas pendientes</div>
+        <div id="dash-crits"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROYECTOS -->
+  <div class="page" id="page-0">
+    <div class="page-header">
+      <div><div class="page-title">Proyectos</div></div>
+      <button class="add-btn" onclick="openProjModal()"><i class="ti ti-plus"></i> Nuevo proyecto</button>
+    </div>
+    <div class="filters">
+      <div class="search-wrap"><i class="ti ti-search"></i><input class="srch" id="p0-srch" placeholder="Buscar..." oninput="renderP0()"></div>
+      <span class="filters-lbl">PM:</span>
+      <div id="p0-pm-f" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+    </div>
+    <div id="p0-sections"></div>
+  </div>
+
+  <!-- GANTT GENERAL -->
+  <div class="page" id="page-2">
+    <div class="page-header"><div><div class="page-title">Gantt de obras</div></div></div>
+    <div class="filters" id="p2-f"></div>
+    <div class="g-wrap" id="p2-gantt-wrap">
+      <div class="g-container" id="p2-gantt"></div>
+    </div>
+  </div>
+
+  <!-- TAREAS -->
+  <div class="page" id="page-3">
+    <div class="page-header"><div><div class="page-title">Tareas</div></div></div>
+    <div class="pm-tabs" id="pm-tabs"></div>
+    <div class="filters" style="flex-wrap:wrap;gap:6px">
+      <div class="search-wrap"><i class="ti ti-search"></i><input class="srch" id="t-srch" placeholder="Buscar tarea..." oninput="renderTasks()"></div>
+      <div id="t-sf" style="display:flex;gap:4px"></div>
+      <div id="t-pf" style="display:flex;gap:4px"></div>
+      <button class="add-btn" style="margin-left:auto" onclick="openTaskModal()"><i class="ti ti-plus"></i> Tarea</button>
+    </div>
+    <div class="sum-bar" id="t-sum"></div>
+    <div class="col-hdr">
+      <span></span><span>Actividad</span><span>Hito</span><span>Prioridad</span><span>Fecha</span><span>Status</span><span></span>
+    </div>
+    <div id="task-board"></div>
+  </div>
+    </div>
+    <div class="prog-gantt">
+      <div class="pg-container" id="prog-gantt"></div>
+    </div>
+  </div>
+</div>
+  <!-- ADMIN -->
+  <div id="page-admin" style="display:none">
+    <div class="page-hdr"><div><div class="page-title">Administración</div><div class="page-sub">Gestión de Project Managers</div></div></div>
+    <div style="max-width:480px">
+      <div style="background:#111;border:0.5px solid #1e1e1e;border-radius:10px;overflow:hidden;margin-bottom:1.5rem">
+        <div style="padding:12px 16px;border-bottom:0.5px solid #1e1e1e;font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em">Project Managers</div>
+        <div id="pm-admin-list"></div>
+        <div style="padding:12px 16px;border-top:0.5px solid #1e1e1e;display:flex;gap:8px;align-items:center">
+          <input id="pm-new-name" placeholder="Nombre del PM" maxlength="20"
+            style="flex:1;background:#0e0e0e;border:0.5px solid #2a2a2a;border-radius:6px;color:#e8e2da;padding:7px 10px;font-size:13px;font-family:inherit;outline:none"
+            onfocus="this.style.borderColor='#C4622D'" onblur="this.style.borderColor='#2a2a2a'"
+            onkeydown="if(event.key==='Enter')addPM()">
+          <button onclick="addPM()" style="background:#C4622D;border:none;color:#fff;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit">
+            + Agregar
+          </button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#333;line-height:1.6">
+        Los cambios se aplican inmediatamente. Al eliminar un PM sus tareas no se borran, solo dejan de mostrarse en las pestañas.
+      </div>
+    </div>
+  </div>
+
+  <!-- COORDINACION -->
+  <div class="page" id="page-coord">
+    <div class="page-header">
+      <div><div class="page-title">Coordinación</div><div class="page-sub">Tareas concluidas — vista privada</div></div>
+    </div>
+    <div id="coord-content"></div>
+  </div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="proj-modal">
+<div class="modal">
+  <h3 id="pm-ttl">Nuevo proyecto</h3>
+  <div class="field"><label>Nombre</label><input type="text" id="pm-nom"></div>
+  <div class="field"><label>PM</label><select id="pm-pm"><option value="">— Sin asignar</option><option>PAOLA</option><option>MINERVA</option><option>NACHO</option><option>FANNY</option><option>DULCE</option><option>ESTEPHANIE</option><option>JUAN</option></select></div>
+  <div class="field"><label>Tipo</label>
+  <select id="pm-tipo">
+    <option value="">— Seleccionar —</option>
+    <option>TENDER</option>
+    <option>OBRA ACTIVA</option>
+    <option>MANTENIMIENTO</option>
+    <option>POST VENTA</option>
+  </select></div>
+  <div class="field"><label>Ciudad</label><input type="text" id="pm-ciudad"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="field"><label>Inicio proyecto</label><input type="date" id="pm-ini"></div>
+    <div class="field"><label>Cierre proyecto</label><input type="date" id="pm-cie"></div>
+  </div>
+  <div style="background:#0e0e0e;border:0.5px solid #1e1e1e;border-radius:8px;padding:10px 12px;margin:4px 0">
+    <div style="font-size:11px;color:#555;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Fechas de hitos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field"><label>Inicio Tender</label><input type="date" id="pm-h-tender"></div>
+      <div class="field"><label>Fin Tender</label><input type="date" id="pm-h-tender-fin"></div>
+      <div class="field"><label>Inicio de Obra</label><input type="date" id="pm-h-obra"></div>
+      <div class="field"><label>Cierre de Obra</label><input type="date" id="pm-h-cierre"></div>
+    </div>
+  </div>
+  <div class="field"><label>Status</label><select id="pm-st"><option>ABIERTO</option><option>CERRADO</option><option>EN PAUSA</option><option>MANTENIMIENTO</option></select></div>
+  <div class="mf">
+    <button class="bdel" id="pm-del" onclick="delProj()" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Eliminar</button>
+    <button class="bc" onclick="closeModals()">Cancelar</button>
+    <button class="bs" onclick="saveProj()">Guardar</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="task-modal">
+<div class="modal">
+  <h3 id="tm-ttl">Nueva tarea</h3>
+  <div class="field"><label>Proyecto</label><input type="text" id="tm-proj"></div>
+  <div class="field"><label>Actividad</label><textarea id="tm-act" rows="2"></textarea></div>
+  <div class="field"><label>Hito</label><select id="tm-hito"><option>TENDER</option><option>OBRA</option><option>POST VENTA</option><option>MANTENIMIENTO</option><option>ADMINISTRATIVO</option><option>DISEÑO</option></select></div>
+  <div class="field"><label>Prioridad</label><select id="tm-pri"><option>CRÍTICA</option><option>ALTA</option><option>MEDIA</option><option>BAJA</option></select></div>
+  <div class="field"><label>Fecha</label><input type="date" id="tm-fecha"></div>
+  <div class="field"><label>Status</label><select id="tm-st"><option>ACTIVO</option><option>SEGUIMIENTO</option><option>HECHO</option></select></div>
+  <div class="mf">
+    <button class="bdel" id="tm-del" onclick="delTask()" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Eliminar</button>
+    <button class="bc" onclick="closeModals()">Cancelar</button>
+    <button class="bs" onclick="saveTask()">Guardar</button>
+  </div>
+</div></div>
+
+<script>
+const today = new Date(); today.setHours(0,0,0,0);
+
+// ── DATA SEED ─────────────────────────────────────────────────────────
+const PROJECTS_SEED = [{"id":1,"nombre":"ALLUX MIDTOWN","ciudad":"GUADALAJARA","tipo":"COTIZACION","pm":"MINERVA","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":2,"nombre":"AMERICAN EAGLE OASIS","ciudad":"CDMX","tipo":"OBRA","pm":"","inicio":"2026-05-11","cierre":"2026-08-03","status":"CERRADO"},{"id":3,"nombre":"AMERICAN EAGLE CHIAPAS","ciudad":"CHIAPAS","tipo":"OBRA","pm":"","inicio":"2026-04-13","cierre":"2026-04-13","status":"ABIERTO"},{"id":4,"nombre":"AMERICAN EAGLE MONTERREY","ciudad":"MONTERREY","tipo":"OBRA","pm":"","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":5,"nombre":"ARMANI LERMA","ciudad":"CDMX","tipo":"TENDER","pm":"ESTEPHANIE","inicio":"2026-06-01","cierre":"2026-07-31","status":"ABIERTO"},{"id":6,"nombre":"ARUMA TOREO","ciudad":"CDMX","tipo":"OBRA","pm":"ESTEPHANIE","inicio":"2026-05-18","cierre":"2026-05-19","status":"ABIERTO"},{"id":7,"nombre":"BELMOND","ciudad":"SAN MIGUEL ALLENDE","tipo":"TENDER","pm":"","inicio":"2026-02-06","cierre":"2026-02-06","status":"ABIERTO"},{"id":8,"nombre":"BELMOND CANCÚN","ciudad":"CANCÚN","tipo":"TENDER","pm":"","inicio":"2026-02-06","cierre":"2026-02-06","status":"ABIERTO"},{"id":9,"nombre":"BIMBA Y LOLA LA ISLA","ciudad":"MERIDA","tipo":"TENDER","pm":"DULCE","inicio":"2026-05-12","cierre":"2026-05-12","status":"ABIERTO"},{"id":10,"nombre":"CAROLINA HERRERA POLANCO","ciudad":"CDMX","tipo":"OBRA","pm":"","inicio":"2025-05-05","cierre":"2025-05-06","status":"CERRADO"},{"id":11,"nombre":"CARTIER ANGELOPOLIS","ciudad":"PUEBLA","tipo":"ADECUACIÓN","pm":"ESTEPHANIE","inicio":"2026-04-28","cierre":"2026-05-08","status":"ABIERTO"},{"id":12,"nombre":"CARTIER PH SAN PEDRO","ciudad":"MONTERREY","tipo":"OBRA","pm":"PAOLA","inicio":"2026-04-27","cierre":"2026-05-14","status":"ABIERTO"},{"id":13,"nombre":"CARTIER ARTZ","ciudad":"CDMX","tipo":"ADECUACIÓN","pm":"PAOLA","inicio":"2026-06-01","cierre":"2026-06-01","status":"ABIERTO"},{"id":14,"nombre":"COUNTRY SPA DAMAS","ciudad":"GUADALAJARA","tipo":"REMODELACIÓN","pm":"PAOLA","inicio":"2026-02-16","cierre":"2026-05-15","status":"ABIERTO"},{"id":15,"nombre":"COUNTRY JOVENES","ciudad":"GUADALAJARA","tipo":"REMODELACIÓN","pm":"PAOLA","inicio":"2026-05-12","cierre":"2026-05-29","status":"ABIERTO"},{"id":16,"nombre":"DIESEL MIDTOWN","ciudad":"GUADALAJARA","tipo":"OBRA","pm":"","inicio":"2025-11-14","cierre":"2026-03-10","status":"CERRADO"},{"id":17,"nombre":"DIESEL CANCUN","ciudad":"CANCUN","tipo":"MANTENIMIENTO","pm":"","inicio":null,"cierre":null,"status":"MANTENIMIENTO"},{"id":18,"nombre":"DOLCE GABBANA PH SATELITE","ciudad":"CDMX","tipo":"LIGHTBOX","pm":"MINERVA","inicio":"2025-11-10","cierre":"2025-12-11","status":"CERRADO"},{"id":19,"nombre":"DOLCE GABBANA SATELITE CORNER","ciudad":"CDMX","tipo":"CORNER","pm":"MINERVA","inicio":"2026-08-03","cierre":"2026-08-03","status":"ABIERTO"},{"id":20,"nombre":"DOLCE GABBANA OFICINAS POLANCO","ciudad":"CDMX","tipo":"OBRA","pm":"MINERVA","inicio":"2026-05-11","cierre":"2026-05-11","status":"ABIERTO"},{"id":21,"nombre":"HOMESTAR ESCUELA NATACIÓN","ciudad":"EEUU","tipo":"PROYECTO EJECUTIVO","pm":"NACHO","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":22,"nombre":"HUGO BOSS ANDARES","ciudad":"GUADALAJARA","tipo":"MANTENIMIENTO CORRECTIVO","pm":"ESTEPHANIE","inicio":null,"cierre":null,"status":"MANTENIMIENTO"},{"id":23,"nombre":"HUGO BOSS PN ANDARES","ciudad":"GUADALAJARA","tipo":"MANTENIMIENTO","pm":"MINERVA","inicio":"2026-05-18","cierre":"2026-05-22","status":"ABIERTO"},{"id":24,"nombre":"HUGO BOSS LIVERPOOL CORNER","ciudad":"GUADALAJARA","tipo":"CORNER","pm":"MINERVA","inicio":"2026-08-03","cierre":"2026-08-03","status":"ABIERTO"},{"id":25,"nombre":"HUGO BOSS CORNER PH MTY","ciudad":"MONTERREY","tipo":"CORNER","pm":"MINERVA","inicio":"2026-05-15","cierre":"2026-07-29","status":"ABIERTO"},{"id":26,"nombre":"HUGO BOSS PASEO SAN PEDRO","ciudad":"MONTERREY","tipo":"TENDER","pm":"NACHO","inicio":"2026-05-18","cierre":"2026-05-22","status":"CERRADO"},{"id":27,"nombre":"J&J PERISUR","ciudad":"CDMX","tipo":"TIENDA","pm":"","inicio":"2026-04-06","cierre":"2026-05-15","status":"ABIERTO"},{"id":28,"nombre":"LOEWE PH ANDARES","ciudad":"GUADALAJARA","tipo":"ADICIONALES","pm":"NACHO","inicio":"2025-12-22","cierre":"2026-02-25","status":"ABIERTO"},{"id":29,"nombre":"LOEWE PH PASEO SAN PEDRO","ciudad":"MONTERREY","tipo":"ADICIONALES","pm":"NACHO","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":30,"nombre":"LOEWE PH POLANCO","ciudad":"CDMX","tipo":"TENDER","pm":"NACHO","inicio":"2026-05-11","cierre":"2026-05-11","status":"ABIERTO"},{"id":31,"nombre":"MAISON MARGIELA PH MTY","ciudad":"MONTERREY","tipo":"TENDER","pm":"DULCE","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":32,"nombre":"NESPRESSO ANTEA","ciudad":"QUERETARO","tipo":"TENDER","pm":"MINERVA","inicio":"2026-05-18","cierre":"2026-08-07","status":"ABIERTO"},{"id":33,"nombre":"NESPRESSO PH SATELITE","ciudad":"CDMX","tipo":"OBRA","pm":"","inicio":"2026-06-15","cierre":"2026-08-28","status":"ABIERTO"},{"id":34,"nombre":"NIKE CENTRO","ciudad":"CDMX","tipo":"MONTACARGAS","pm":"PAOLA","inicio":"2027-01-11","cierre":"2027-05-24","status":"ABIERTO"},{"id":35,"nombre":"NIKE PLAZA PATRIA","ciudad":"GUADALAJARA","tipo":"TENDER","pm":"PAOLA","inicio":"2026-05-12","cierre":"2026-05-12","status":"ABIERTO"},{"id":36,"nombre":"PARFOIS AEROPUERTO","ciudad":"CDMX","tipo":"CORNER","pm":"","inicio":"2026-04-13","cierre":"2026-05-16","status":"ABIERTO"},{"id":37,"nombre":"SALVATORE FERRAGAMO PH MTY","ciudad":"MONTERREY","tipo":"OBRA","pm":"MINERVA","inicio":"2025-09-22","cierre":"2025-12-12","status":"CERRADO"},{"id":38,"nombre":"ZIMMERMAN ANDARES","ciudad":"GUADALAJARA","tipo":"TIENDA","pm":"","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":39,"nombre":"ZIMMERMAN LA ISLA","ciudad":"CANCUN","tipo":"GARANTIAS","pm":"NACHO","inicio":null,"cierre":null,"status":"ABIERTO"},{"id":40,"nombre":"ZIMMERMAN ANTARA 2","ciudad":"CDMX","tipo":"OBRA","pm":"","inicio":"2026-06-15","cierre":"2026-11-02","status":"ABIERTO"}];
+
+const TASKS_SEED = {"PAOLA":[{"id":1,"fecha":"2026-05-11","proyecto":"Cartier","hito":"CIERRE","actividad":"Solicitar reporte para cliente","prioridad":"ALTA","status":"ACTIVO"},{"id":2,"fecha":"2026-05-11","proyecto":"Cartier","hito":"CIERRE","actividad":"Confirmar entrega millwork Paseo SG","prioridad":"CRÍTICA","status":"ACTIVO"},{"id":3,"fecha":"2026-05-11","proyecto":"Cartier","hito":"CIERRE","actividad":"Confirmar trabajos pintura Torres Puebla","prioridad":"MEDIA","status":"SEGUIMIENTO"},{"id":4,"fecha":"2026-05-11","proyecto":"Cartier","hito":"CIERRE","actividad":"Espera comentarios correo Paulina BOT Artz","prioridad":"BAJA","status":"SEGUIMIENTO"},{"id":5,"fecha":"2026-05-11","proyecto":"Country Club Spa Damas","hito":"OBRA","actividad":"Enviar correo a Alejandra sistema puerta","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":6,"fecha":"2026-05-11","proyecto":"Country Club Spa Damas","hito":"OBRA","actividad":"Revisar cristales puerta principal","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":7,"fecha":"2026-05-11","proyecto":"Country Club Spa Damas","hito":"OBRA","actividad":"Hacer plano puertas instalaciones nichos","prioridad":"ALTA","status":"ACTIVO"},{"id":8,"fecha":"2026-05-11","proyecto":"Country Club Spa Damas","hito":"CIERRE","actividad":"Confirmar entrega 13 mayo","prioridad":"CRÍTICA","status":"ACTIVO"},{"id":9,"fecha":"2026-05-11","proyecto":"Country Club Spa Damas","hito":"CIERRE","actividad":"Solicitar cuadrilla instalación carpintería","prioridad":"ALTA","status":"ACTIVO"},{"id":10,"fecha":"2026-05-11","proyecto":"Nike Plaza Patria","hito":"TENDER","actividad":"Revisión de Planos para envio de dudas","prioridad":"ALTA","status":"ACTIVO"},{"id":11,"fecha":"2026-05-11","proyecto":"Nike Plaza Patria","hito":"TENDER","actividad":"Cuantificación de partidas para cotizacion","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":12,"fecha":"2026-05-11","proyecto":"Nike Plaza Patria","hito":"TENDER","actividad":"Revisar y Mandar Ingenierías a Proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":13,"fecha":"2026-05-11","proyecto":"Nike Plaza Patria","hito":"TENDER","actividad":"Seguimiento cotizaciones proveedores Ingenierías","prioridad":"ALTA","status":"ACTIVO"},{"id":14,"fecha":"2026-05-11","proyecto":"Nike Centro Histórico","hito":"CIERRE","actividad":"Revisar Extrapolar y Enviar a Eduardo","prioridad":"MEDIA","status":"SEGUIMIENTO"},{"id":15,"fecha":"2026-05-11","proyecto":"Nike Centro Histórico","hito":"CIERRE","actividad":"Revisar cuando entregan Extrapolar","prioridad":"ALTA","status":"ACTIVO"},{"id":16,"fecha":"2026-05-11","proyecto":"Remodelación Baños","hito":"CIERRE","actividad":"Confirmar personal listo arranque obra","prioridad":"CRÍTICA","status":"ACTIVO"},{"id":17,"fecha":"2026-05-11","proyecto":"Remodelación Baños","hito":"TENDER","actividad":"Revisar programa obra con Edgar","prioridad":"ALTA","status":"ACTIVO"}],"MINERVA":[{"id":1,"fecha":"2026-05-11","proyecto":"D&G PH Satélite","hito":"CIERRE","actividad":"Coordinar visita técnica con residente y proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":2,"fecha":"2026-05-11","proyecto":"D&G Oficinas","hito":"CIERRE","actividad":"Revisar información con proveedores","prioridad":"MEDIA","status":"ACTIVO"},{"id":3,"fecha":"2026-05-11","proyecto":"D&G Oficinas","hito":"CIERRE","actividad":"Coordinar visita técnica con residente","prioridad":"BAJA","status":"ACTIVO"},{"id":4,"fecha":"2026-05-11","proyecto":"D&G PH Satélite Light Box","hito":"CIERRE","actividad":"Dar seguimiento a cambio de láminas","prioridad":"MEDIA","status":"SEGUIMIENTO"},{"id":5,"fecha":"2026-05-11","proyecto":"Ferragamo PH MTY","hito":"CIERRE","actividad":"Seguimiento fabricación de muestras","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":6,"fecha":"2026-05-11","proyecto":"Ferragamo PH MTY","hito":"CIERRE","actividad":"Coordinar envío de muestras a cliente","prioridad":"MEDIA","status":"ACTIVO"},{"id":7,"fecha":"2026-05-11","proyecto":"Ferragamo Fachada","hito":"CIERRE","actividad":"Revisar cierre económico con cliente","prioridad":"CRÍTICA","status":"ACTIVO"},{"id":8,"fecha":"2026-05-11","proyecto":"Ferragamo Fachada","hito":"CIERRE","actividad":"Programar pagos cliente/proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":9,"fecha":"2026-05-11","proyecto":"Hugo Boss Andares","hito":"MANTENIMIENTO","actividad":"Programar reunión preliminar con proveedor","prioridad":"MEDIA","status":"ACTIVO"},{"id":10,"fecha":"2026-05-11","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Revisión de Planos para envio de dudas","prioridad":"ALTA","status":"ACTIVO"},{"id":11,"fecha":"2026-05-11","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Cuantificación de partidas para cotizacion","prioridad":"ALTA","status":"ACTIVO"},{"id":12,"fecha":"2026-05-18","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Apoyo Acabado Marmorino","prioridad":"ALTA","status":"ACTIVO"},{"id":13,"fecha":"2026-05-25","proyecto":"Nespresso Antea","hito":"TENDER","actividad":"Revisión propuesta técnica","prioridad":"ALTA","status":"ACTIVO"}],"NACHO":[{"id":1,"fecha":"2026-05-11","proyecto":"Loewe GDL","hito":"POST APERTURA","actividad":"Cancelar proveedores por falta autorización pagos","prioridad":"ALTA","status":"ACTIVO"},{"id":2,"fecha":"2026-05-11","proyecto":"Loewe GDL","hito":"POST APERTURA","actividad":"Seguimiento autorización pagos PH","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":3,"fecha":"2026-05-11","proyecto":"Loewe MTY","hito":"POST APERTURA","actividad":"Seguimiento autorización trabajos punchlist","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":4,"fecha":"2026-05-11","proyecto":"Loewe MTY","hito":"POST APERTURA","actividad":"Seguimiento autorización pago viniles PH","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":5,"fecha":"2026-05-11","proyecto":"General","hito":"CIERRE","actividad":"Solicitar pago change orders","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":6,"fecha":"2026-05-11","proyecto":"General","hito":"CIERRE","actividad":"Presionar seguimiento pagos con Dani","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":7,"fecha":"2026-05-11","proyecto":"Hugo Boss MTY PSP","hito":"TENDER","actividad":"Seguimiento reunión con HB","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":8,"fecha":"2026-05-11","proyecto":"Hugo Boss MTY PSP","hito":"TENDER","actividad":"Revisar mejora precio enviada","prioridad":"ALTA","status":"SEGUIMIENTO"},{"id":9,"fecha":"2026-05-11","proyecto":"Loewe CDMX","hito":"TENDER","actividad":"Seguimiento definición proyecto","prioridad":"MEDIA","status":"SEGUIMIENTO"},{"id":10,"fecha":"2026-05-11","proyecto":"Loewe CDMX","hito":"POST APERTURA","actividad":"Cotización Diseño Puerta con espejo Rolada","prioridad":"ALTA","status":"ACTIVO"}],"FANNY":[{"id":1,"fecha":"2026-05-11","proyecto":"Cartier Torres Puebla","hito":"CIERRE","actividad":"Revisión detalles previo cierre","prioridad":"ALTA","status":"ACTIVO"},{"id":2,"fecha":"2026-05-11","proyecto":"Cartier Torres Puebla","hito":"POST APERTURA","actividad":"Entrega cierre proyecto","prioridad":"CRÍTICA","status":"SEGUIMIENTO"},{"id":3,"fecha":"2026-05-11","proyecto":"Aruma Toreo","hito":"MANTENIMIENTO","actividad":"Confirmación fecha con proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":4,"fecha":"2026-05-11","proyecto":"Aruma Toreo","hito":"MANTENIMIENTO","actividad":"Recolección luminarias","prioridad":"MEDIA","status":"ACTIVO"},{"id":5,"fecha":"2026-05-11","proyecto":"AXO Lerma","hito":"TENDER","actividad":"Seguimiento comentarios licitación","prioridad":"ALTA","status":"ACTIVO"},{"id":6,"fecha":"2026-05-11","proyecto":"AXO Lerma","hito":"TENDER","actividad":"Revisión muestra piso vinílico","prioridad":"MEDIA","status":"ACTIVO"}],"DULCE":[{"id":1,"fecha":"2026-05-11","proyecto":"BIMBA Y LOLA","hito":"TENDER","actividad":"Revisión de Planos para envio de dudas","prioridad":"ALTA","status":"ACTIVO"},{"id":2,"fecha":"2026-05-11","proyecto":"BIMBA Y LOLA","hito":"TENDER","actividad":"Cuantificación de partidas para cotizacion","prioridad":"ALTA","status":"ACTIVO"},{"id":3,"fecha":"2026-05-11","proyecto":"BIMBA Y LOLA","hito":"TENDER","actividad":"Revisar y Mandar Ingenierías a Proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":4,"fecha":"2026-05-11","proyecto":"BIMBA Y LOLA","hito":"TENDER","actividad":"Seguimiento cotizaciones proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":5,"fecha":"2026-05-11","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Revisión de Planos para envio de dudas","prioridad":"ALTA","status":"ACTIVO"},{"id":6,"fecha":"2026-05-11","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Cuantificación de partidas para cotizacion","prioridad":"ALTA","status":"ACTIVO"},{"id":7,"fecha":"2026-05-11","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Revisar y Mandar Ingenierías a Proveedores","prioridad":"ALTA","status":"ACTIVO"},{"id":8,"fecha":"2026-05-18","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Cuantificación de partidas con Arturo","prioridad":"ALTA","status":"ACTIVO"},{"id":9,"fecha":"2026-05-18","proyecto":"BIMBA Y LOLA","hito":"TENDER","actividad":"Seguimiento cotizaciones proveedores sem 2","prioridad":"ALTA","status":"ACTIVO"},{"id":10,"fecha":"2026-05-25","proyecto":"MAISON MARGIELA","hito":"TENDER","actividad":"Revisión propuesta final antes de envío","prioridad":"CRÍTICA","status":"ACTIVO"}]};
+
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let projects=[], tasks={PAOLA:[],MINERVA:[],NACHO:[],FANNY:[],DULCE:[]};
+let ePM='PAOLA',eProjId=null,eTaskId=null;
+let collapsed={},secColl={},tF={status:'TODOS',pri:'TODOS'},p0F='TODOS',gF='TODOS';
+let ganttView='quarter',ganttPM='TODOS';
+let charts={};
+let activeDD=null;
+
+const PMS_DEFAULT=[{id:'PAOLA',i:'PA',c:'#C4622D'},{id:'MINERVA',i:'MI',c:'#7A9E87'},{id:'NACHO',i:'NA',c:'#7A9EC4'},{id:'FANNY',i:'FA',c:'#C4A862'},{id:'DULCE',i:'DU',c:'#9E7AC4'}];
+let PMS=JSON.parse(localStorage.getItem('ktk_pms')||'null')||PMS_DEFAULT;
+function savePMS(){localStorage.setItem('ktk_pms',JSON.stringify(PMS));}
+const PC=['#C4622D','#7A9E87','#7A9EC4','#C4A862','#9E7AC4','#C47A7A','#62C4A8','#A8C462','#C462A8','#629EC4'];
+const pcM={};
+
+function gc(p){if(!p)return'#444';if(!pcM[p]){pcM[p]=PC[Object.keys(pcM).length%PC.length];}return pcM[p];}
+function pmC(pm){return(PMS.find(p=>p.id===pm)||{c:'#555'}).c;}
+function pmI(pm){return(PMS.find(p=>p.id===pm)||{i:'??'}).i;}
+
+// ── STORAGE ───────────────────────────────────────────────────────────
+function loadData(){
+  try{const r=localStorage.getItem('ktk_p2');if(r)projects=JSON.parse(r);}catch(e){}
+  if(!projects.length)projects=PROJECTS_SEED.map(p=>({...p}));
+  try{const r=localStorage.getItem('ktk_t2');if(r)tasks=JSON.parse(r);}catch(e){}
+  if(Object.values(tasks).every(a=>!a||!a.length))tasks=JSON.parse(JSON.stringify(TASKS_SEED));
+  Object.values(tasks).flat().forEach(t=>{if(t.proyecto)gc(t.proyecto);});
+}
+function saveP(){try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){} syncProjects();}
+async function syncProjects(){
+  if(!window.SB)return;
+  try{
+    for(const p of projects){
+      const row={nombre:p.nombre,pm:p.pm||null,tipo:p.tipo||null,ciudad:p.ciudad||null,inicio:p.inicio||null,cierre:p.cierre||null,status:p.status||'ABIERTO',hitos:p.hitos||{}};
+      if(p.id&&Number(p.id)<2000000000){await window.SB.from('projects').update(row).eq('id',p.id);}
+      else{const {data}=await window.SB.from('projects').insert(row).select().single();if(data){p.id=data.id;try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}}}
+    }
+  }catch(e){console.warn('sync projects:',e);}
+}
+function saveT(){try{localStorage.setItem('ktk_t2',JSON.stringify(tasks));}catch(e){}}
+
+// ── COMENTARIOS ──────────────────────────────────────────────────────────
+let comments={};
+try{comments=JSON.parse(localStorage.getItem('ktk_comments')||'{}');}catch(e){comments={};}
+function saveComments(){try{localStorage.setItem('ktk_comments',JSON.stringify(comments));}catch(e){}}
+function getCmts(pm,tid){return comments[pm+'_'+tid]||[];}
+function addCmt(pm,tid,text){
+  const key=pm+'_'+tid;
+  if(!comments[key])comments[key]=[];
+  comments[key].push({id:Date.now(),text,author:'KTK',ts:new Date().toISOString()});
+  saveComments();
+}
+function delCmt(pm,tid,cid){
+  const key=pm+'_'+tid;
+  if(comments[key])comments[key]=comments[key].filter(c=>c.id!==cid);
+  saveComments();
+}
+function toggleCmtArea(pm,tid){
+  const el=document.getElementById('cmt-'+pm+'-'+tid);
+  if(!el)return;
+  const open=el.style.display==='block';
+  el.style.display=open?'none':'block';
+  if(!open){renderCmtList(pm,tid);setTimeout(()=>{const i=document.getElementById('cmti-'+pm+'-'+tid);if(i)i.focus();},50);}
+  const btn=document.getElementById('cmtbtn-'+pm+'-'+tid);
+  if(btn)btn.style.color=open?'':'#C4622D';
+}
+function submitCmt(pm,tid){
+  const inp=document.getElementById('cmti-'+pm+'-'+tid);
+  if(!inp||!inp.value.trim())return;
+  addCmt(pm,tid,inp.value.trim());
+  inp.value='';inp.style.height='auto';
+  renderCmtList(pm,tid);
+  const n=getCmts(pm,tid).length;
+  const badge=document.getElementById('cmtbdg-'+pm+'-'+tid);
+  const btn=document.getElementById('cmtbtn-'+pm+'-'+tid);
+  if(badge){badge.textContent=n;badge.style.display=n?'flex':'none';}
+  if(btn&&n)btn.classList.add('has-cmts');
+}
+function renderCmtList(pm,tid){
+  const el=document.getElementById('cmtlist-'+pm+'-'+tid);
+  if(!el)return;
+  const cmts=getCmts(pm,tid);
+  if(!cmts.length){el.innerHTML='<div style="font-size:11px;color:#333;padding:2px 0">Sin comentarios aún.</div>';return;}
+  el.innerHTML=cmts.map(c=>`<div class="cmt-item">
+    <div class="cmt-meta">
+      <span class="cmt-author">${c.author||'KTK'}</span>
+      <span class="cmt-time">${fDT(new Date(c.ts))}</span>
+      <button class="cmt-del" onclick="delCmt('${pm}',${tid},${c.id});renderCmtList('${pm}',${tid});const b=document.getElementById('cmtbdg-${pm}-${tid}');const n=getCmts('${pm}',${tid}).length;if(b){b.textContent=n;b.style.display=n?'flex':'none';}" title="Eliminar">✕</button>
+    </div>
+    <div class="cmt-text">${c.text.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+  </div>`).join('');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function pD(s){if(!s)return null;const d=new Date(s);d.setHours(0,0,0,0);return isNaN(d)?null:d;}
+function fD(d){if(!d)return null;return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});}
+function fDT(d){if(!d)return null;return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});}
+function dDiff(a,b){return Math.round((b-a)/86400000);}
+function pSt(p){const ci=pD(p.cierre);if(!ci)return'gray';const d=dDiff(today,ci);if(d<0)return'red';if(d<=7)return'yellow';return'green';}
+function chipSt(s){if(s==='red')return'<span class="chip cr"><i class="ti ti-alert-triangle"></i> En riesgo</span>';if(s==='yellow')return'<span class="chip cy"><i class="ti ti-clock"></i> Atención</span>';if(s==='gray')return'<span class="chip cgr">—</span>';return'<span class="chip cg"><i class="ti ti-check"></i> Al día</span>';}
+function chipD(s,u){if(!s)return'<span class="dc-no">—</span>';const d=pD(s);if(!d)return'<span class="dc-no">—</span>';const diff=dDiff(today,d),f=fD(d);if(diff<0)return`<span class="dc dc-ov"><i class="ti ti-alert-triangle"></i> Venció ${Math.abs(diff)}d</span>`;if(diff<=u)return`<span class="dc dc-w"><i class="ti ti-clock"></i> ${f}</span>`;return`<span class="dc dc-ok">${f}</span>`;}
+
+function hChip(t,pm){
+  const m={'TENDER':['hc-tender','Tender'],'OBRA':['hc-obra','Obra'],'POST VENTA':['hc-postventa','Post Venta'],'MANTENIMIENTO':['hc-mant','Mantenimiento'],'ADMINISTRATIVO':['hc-admin','Administrativo'],'DISEÑO':['hc-diseno','Diseño']};
+  const[cls,lbl]=m[t.hito]||['hc-ot',t.hito||'—'];
+  return`<span class="hc ${cls} editable" onclick="showHitoDD(event,${t.id},'${pm}')" title="Clic para cambiar hito">${lbl}</span>`;
+}
+function pChip(t,pm){
+  const m={'CRÍTICA':['pc-cr','⚠ Crítica'],'ALTA':['pc-al','Alta'],'MEDIA':['pc-me','Media'],'BAJA':['pc-ba','Baja']};
+  const[cls,lbl]=m[t.prioridad]||['pc-ba',t.prioridad||'—'];
+  return`<span class="pc ${cls} editable" onclick="cyclePri(${t.id},'${pm}')" title="Clic para cambiar prioridad">${lbl}</span>`;
+}
+function dChip(t,pm){
+  if(!t.fecha)return`<span class="dc dc-no editable" onclick="showDatePicker(event,${t.id},'${pm}')" title="Clic para agregar fecha">+ Fecha</span>`;
+  const d=pD(t.fecha);const diff=dDiff(today,d);const f=fD(d);
+  if(diff<0)return`<span class="dc dc-ov editable" onclick="showDatePicker(event,${t.id},'${pm}')" title="Clic para cambiar fecha"><i class="ti ti-alert-triangle"></i> Venció ${Math.abs(diff)}d</span>`;
+  if(diff<=3)return`<span class="dc dc-w editable" onclick="showDatePicker(event,${t.id},'${pm}')" title="Clic para cambiar fecha"><i class="ti ti-clock"></i> ${f}</span>`;
+  return`<span class="dc dc-ok editable" onclick="showDatePicker(event,${t.id},'${pm}')" title="Clic para cambiar fecha">${f}</span>`;
+}
+function scChip(t,pm){const cls={ACTIVO:'sca',SEGUIMIENTO:'scs',HECHO:'sch'};const lbl={ACTIVO:'● Activo',SEGUIMIENTO:'◐ Seguimiento',HECHO:'✓ Hecho'};return`<span class="sc-chip ${cls[t.status]}" onclick="showStatusDD(event,${t.id},'${pm}')">${lbl[t.status]||t.status}</span>`;}
+
+// ── INLINE EDIT ───────────────────────────────────────────────────────
+function closeDD(){if(activeDD){activeDD.remove();activeDD=null;}}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.inline-dd')&&!e.target.closest('.inline-date')&&!e.target.closest('.editable'))closeDD();
+  if(!e.target.closest('#notif-btn')&&!e.target.closest('#notif-panel'))document.getElementById('notif-panel').classList.remove('open');
+});
+
+function showHitoDD(e,id,pm){
+  e.stopPropagation();closeDD();
+  const opts=['TENDER','OBRA','POST VENTA','MANTENIMIENTO','ADMINISTRATIVO','DISEÑO'];
+  const dd=document.createElement('div');dd.className='inline-dd';
+  opts.forEach(o=>{const d=document.createElement('div');d.textContent=o;d.onclick=()=>{setHito(id,pm,o);closeDD();};dd.appendChild(d);});
+  dd.style.top=(e.clientY+4)+'px';dd.style.left=e.clientX+'px';
+  document.body.appendChild(dd);activeDD=dd;
+}
+function setHito(id,pm,val){const t=(tasks[pm]||[]).find(x=>x.id===id);if(t){t.hito=val;saveT();renderTasks();}}
+
+const PRI_CYCLE=['CRÍTICA','ALTA','MEDIA','BAJA'];
+function cyclePri(id,pm){const t=(tasks[pm]||[]).find(x=>x.id===id);if(t){const i=PRI_CYCLE.indexOf(t.prioridad);t.prioridad=PRI_CYCLE[(i+1)%PRI_CYCLE.length];saveT();renderTasks();}}
+
+function showDatePicker(e,id,pm){
+  e.stopPropagation();closeDD();
+  const t=(tasks[pm]||[]).find(x=>x.id===id);
+  const wrap=document.createElement('div');wrap.className='inline-date';
+  const inp=document.createElement('input');inp.type='date';inp.value=t?t.fecha||'':'';
+  inp.onchange=()=>{if(t){t.fecha=inp.value||null;saveT();renderTasks();}closeDD();};
+  inp.onkeydown=ev=>{if(ev.key==='Escape')closeDD();};
+  wrap.appendChild(inp);
+  wrap.style.top=(e.clientY+4)+'px';wrap.style.left=e.clientX+'px';
+  document.body.appendChild(wrap);activeDD=wrap;
+  setTimeout(()=>inp.focus(),50);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+function goPage(n,el){
+  document.querySelectorAll('[id^=page-]').forEach(p=>{p.style.display='none';p.classList.remove('active');});
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const pid=n==='dash'?'page-dash':'page-'+n;
+  const pageEl=document.getElementById(pid);
+  if(pageEl){pageEl.style.display='block';pageEl.classList.add('active');}
+  el.classList.add('active');
+  if(n==='dash')renderDash();
+  if(n===0)renderP0();
+  if(n===2)setTimeout(renderP2,50);
+  if(n===3)renderTasks();
+  if(n==='admin')renderPMAdmin();
+  if(n==='coord')renderCoord();
+}
+
+// ── BUILD UI ──────────────────────────────────────────────────────────
+function buildUI(){
+  document.getElementById('date-lbl').textContent=today.toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('p0-pm-f').innerHTML=['TODOS',...PMS.map(p=>p.id),'SIN PM'].map((pm,i)=>`<button class="fb ${i===0?'active':''}" onclick="setP0F('${pm}',this)">${pm==='TODOS'?'Todos':pm==='SIN PM'?'Sin PM':pm.charAt(0)+pm.slice(1).toLowerCase()}</button>`).join('');
+  // Vista Gantt: Mes / Trim / Año
+  document.getElementById('p2-f').innerHTML=
+    ['month','quarter','year'].map((v,i)=>`<button class="fb gv-btn ${i===1?'active':''}" onclick="ganttView='${v}';document.querySelectorAll('.gv-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderP2()">${v==='month'?'Mes':v==='quarter'?'Trim.':'Año'}</button>`).join('')
+    +'<span style="width:0.5px;background:#2a2a2a;margin:0 8px;align-self:stretch;display:inline-block"></span>'
+    +'<span class="filters-lbl">PM:</span>'
+    +['TODOS',...PMS.map(p=>p.id),'SIN PM'].map((pm,i)=>`<button class="fb ${i===0?'active':''}" onclick="setGF('${pm}',this)">${pm==='TODOS'?'Todos':pm==='SIN PM'?'Sin PM':pm.charAt(0)+pm.slice(1).toLowerCase()}</button>`).join('');
+  document.getElementById('pm-tabs').innerHTML=PMS.map(pm=>`<div class="ptab ${pm.id===ePM?'active':''}" onclick="swPM('${pm.id}',this)"><div class="pm-av" style="background:${pm.c}33;color:${pm.c};width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600">${pm.i}</div>${pm.id.charAt(0)+pm.id.slice(1).toLowerCase()}</div>`).join('');
+  document.getElementById('t-sf').innerHTML=['TODOS','ACTIVO','SEGUIMIENTO','HECHO'].map((s,i)=>`<button class="fb ${i===0?'active':''}" onclick="setTF('status','${s}',this)" style="${s==='ACTIVO'?'color:#5be89a':s==='SEGUIMIENTO'?'color:#e8c45b':''}">${s==='TODOS'?'Todos':s.charAt(0)+s.slice(1).toLowerCase()}</button>`).join('');
+  document.getElementById('t-pf').innerHTML=['TODOS','CRÍTICA','ALTA'].map((s,i)=>`<button class="fb ${i===0?'active':''}" onclick="setTF('pri','${s}',this)" style="${s==='CRÍTICA'?'color:#ff9090':s==='ALTA'?'color:#ffd080':''}">${s==='TODOS'?'Todas':s.charAt(0)+s.slice(1).toLowerCase()}</button>`).join('');
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────
+function buildNotifications(){
+  const alerts=projects.filter(p=>{const ci=pD(p.cierre);if(!ci)return false;const d=dDiff(today,ci);return d>=0&&d<=7&&p.status==='ABIERTO';});
+  const btn=document.getElementById('notif-count');
+  if(alerts.length){btn.style.display='flex';btn.textContent=alerts.length;}else{btn.style.display='none';}
+  document.getElementById('notif-list').innerHTML=alerts.length?alerts.map(p=>{const d=dDiff(today,pD(p.cierre));return`<div class="notif-item"><div class="notif-proj">${p.nombre}</div><div class="notif-msg">${d===0?'Vence hoy':d===1?'Vence mañana':`Vence en ${d} días`} — ${p.pm||'Sin PM'}</div></div>`;}).join(''):'<div style="color:#444;font-size:12px;padding:8px 0">Sin alertas activas</div>';
+}
+function toggleNotif(){document.getElementById('notif-panel').classList.toggle('open');}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+function renderDash(){
+  const active=projects.filter(p=>p.status==='ABIERTO');
+  const ok=active.filter(p=>pSt(p)==='green').length;
+  const warn=active.filter(p=>pSt(p)==='yellow').length;
+  const risk=active.filter(p=>pSt(p)==='red').length;
+  const sinFecha=active.filter(p=>pSt(p)==='gray').length;
+
+  const allTasks=Object.values(tasks).flat();
+  const critPend=allTasks.filter(t=>t.prioridad==='CRÍTICA'&&t.status!=='HECHO').length;
+  const vencidas=allTasks.filter(t=>t.fecha&&new Date(t.fecha)<today&&t.status!=='HECHO').length;
+  const mant=projects.filter(p=>p.status==='MANTENIMIENTO').length;
+  document.getElementById('dash-cards').innerHTML=`
+    <div class="sc"><div class="sc-accent" style="background:#C4622D"></div><div class="sc-val">${active.length}</div><div class="sc-lbl">Obras activas</div><div class="sc-sub">${mant} en mantenimiento</div></div>
+    <div class="sc"><div class="sc-accent" style="background:#4dd68a"></div><div class="sc-val" style="color:#4dd68a">${ok}</div><div class="sc-lbl">Al día</div><div class="sc-sub">${Math.round(ok/Math.max(active.length,1)*100)}% del total</div></div>
+    <div class="sc"><div class="sc-accent" style="background:#f0b429"></div><div class="sc-val" style="color:#f0b429">${warn}</div><div class="sc-lbl">Requieren atención</div><div class="sc-sub">Cierre en menos de 14 días</div></div>
+    <div class="sc"><div class="sc-accent" style="background:#ff7070"></div><div class="sc-val" style="color:#ff7070">${risk}</div><div class="sc-lbl">En riesgo</div><div class="sc-sub">${critPend} tareas críticas · ${vencidas} vencidas</div></div>`;
+
+  // Chart 1 — status donut
+  if(charts.status)charts.status.destroy();
+  const ctx1=document.getElementById('chart-status').getContext('2d');
+  charts.status=new Chart(ctx1,{type:'doughnut',data:{labels:['Al día','Atención','En riesgo','Sin fecha'],datasets:[{data:[ok,warn,risk,sinFecha],backgroundColor:['#1a4a30','#3a2800','#4a1010','#1a1a1a'],borderColor:['#4dd68a','#f0b429','#ff7070','#2a2a2a'],borderWidth:2}]},options:{plugins:{legend:{labels:{color:'#666',font:{size:11},boxWidth:10,padding:12}}},cutout:'70%'}});
+
+  // Chart 2 — tenders per PM
+  const pmProjData=PMS.map(pm=>projects.filter(p=>p.pm===pm.id&&p.status!=='CERRADO').length);
+  if(charts.tenders)charts.tenders.destroy();
+  const ctx2=document.getElementById('chart-tenders').getContext('2d');
+  charts.tenders=new Chart(ctx2,{type:'bar',data:{labels:PMS.map(p=>p.id.charAt(0)+p.id.slice(1).toLowerCase()),datasets:[{data:pmProjData,backgroundColor:PMS.map(p=>p.c+'55'),borderColor:PMS.map(p=>p.c),borderWidth:1.5,borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#555',stepSize:1},grid:{color:'#1a1a1a'}}}}});
+
+  // Chart 3 — tipo (vinculado a opciones fijas)
+  const TIPO_CONFIG={
+    'TENDER':       {bg:'#1a253588',border:'#5b8ae8',label:'Tender'},
+    'OBRA ACTIVA':  {bg:'#2a150088',border:'#C4622D',label:'Obra Activa'},
+    'MANTENIMIENTO':{bg:'#0a252088',border:'#5be89a',label:'Mantenimiento'},
+    'POST VENTA':   {bg:'#22100088',border:'#f0b429',label:'Post Venta'},
+    'SIN TIPO':     {bg:'#1a1a1a88',border:'#444',label:'Sin tipo'},
+  };
+  const TIPO_ORDER=['TENDER','OBRA ACTIVA','MANTENIMIENTO','POST VENTA','SIN TIPO'];
+  const tipos={};
+  projects.filter(p=>p.status!=='CERRADO').forEach(p=>{const t=p.tipo||'SIN TIPO';tipos[t]=(tipos[t]||0)+1;});
+  const tipoKeys=TIPO_ORDER.filter(k=>tipos[k]>0);
+  if(charts.tipo)charts.tipo.destroy();
+  const ctx3=document.getElementById('chart-tipo').getContext('2d');
+  charts.tipo=new Chart(ctx3,{type:'bar',data:{
+    labels:tipoKeys.map(k=>TIPO_CONFIG[k]?TIPO_CONFIG[k].label:k),
+    datasets:[{
+      data:tipoKeys.map(k=>tipos[k]),
+      backgroundColor:tipoKeys.map(k=>(TIPO_CONFIG[k]||TIPO_CONFIG['SIN TIPO']).bg),
+      borderColor:tipoKeys.map(k=>(TIPO_CONFIG[k]||TIPO_CONFIG['SIN TIPO']).border),
+      borderWidth:1.5,borderRadius:5
+    }]
+  },options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',stepSize:1},grid:{color:'#1a1a1a'}},y:{ticks:{color:'#888',font:{size:12}},grid:{display:false}}}}});
+
+  // Alerts
+  const alerts=projects.filter(p=>{const ci=pD(p.cierre);if(!ci)return false;const d=dDiff(today,ci);return d>=0&&d<=21&&p.status==='ABIERTO';}).sort((a,b)=>dDiff(today,pD(a.cierre))-dDiff(today,pD(b.cierre)));
+  document.getElementById('dash-alerts-list').innerHTML=alerts.length?alerts.slice(0,6).map(p=>{
+    const d=dDiff(today,pD(p.cierre));
+    const col=d<=2?'#ff7070':d<=7?'#f0b429':'#4dd68a';
+    const pmColor=pmC(p.pm)||'#444';
+    return`<div class="alert-item">
+      <div class="alert-dot" style="background:${col}"></div>
+      <div style="flex:1;overflow:hidden">
+        <div class="alert-txt">${p.nombre}</div>
+        <div style="font-size:10px;color:#333;margin-top:1px">${p.pm||'Sin PM'}</div>
+      </div>
+      <div class="alert-days" style="color:${col}">${d===0?'HOY':d===1?'1d':d+'d'}</div>
+    </div>`;
+  }).join(''):'<div style="color:#333;font-size:12px;padding:1rem 0;text-align:center">Sin vencimientos próximos</div>';
+
+  // PM progress
+  document.getElementById('dash-pm-list').innerHTML=PMS.map(pm=>{
+    const pmTasks=tasks[pm.id]||[];
+    const done=pmTasks.filter(t=>t.status==='HECHO').length;
+    const crits=pmTasks.filter(t=>t.prioridad==='CRÍTICA'&&t.status!=='HECHO').length;
+    const pct=pmTasks.length?Math.round(done/pmTasks.length*100):0;
+    const pmProjs=projects.filter(p=>p.pm===pm.id&&p.status!=='CERRADO').length;
+    return`<div class="pm-row">
+      <div style="width:26px;height:26px;border-radius:7px;background:${pm.c}22;color:${pm.c};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${pm.i}</div>
+      <div style="flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;color:#aaa">${pm.id.charAt(0)+pm.id.slice(1).toLowerCase()}</span>
+          <span style="font-size:10px;color:#444">${pmProjs} proyectos${crits?` · <span style="color:#ff7070">${crits} crit.</span>`:''}</span>
+        </div>
+        <div class="pm-prog-wrap"><div class="pm-prog" style="width:${pct}%;background:${pm.c}"></div></div>
+      </div>
+      <div class="pm-pct" style="color:${pct>70?pm.c:'#444'}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // Critical tasks
+  const crits=Object.entries(tasks).flatMap(([pm,ts])=>ts.filter(t=>t.prioridad==='CRÍTICA'&&t.status!=='HECHO').map(t=>({...t,pm})));
+  document.getElementById('dash-crits').innerHTML=
+    (crits.length?crits.slice(0,6).map(t=>{
+      const col=pmC(t.pm)||'#555';
+      const isVenc=t.fecha&&new Date(t.fecha)<today;
+      return`<div class="crit-row">
+        <span style="width:22px;height:22px;border-radius:5px;background:${col}22;color:${col};font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${t.pm?t.pm.slice(0,2):'??'}</span>
+        <div style="flex:1;overflow:hidden">
+          <div style="font-size:12px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.actividad}</div>
+          <div style="font-size:10px;color:#333;margin-top:1px">${t.proyecto||''}</div>
+        </div>
+        ${isVenc?'<span style="font-size:10px;color:#ff7070;flex-shrink:0;font-weight:600">VENCIDA</span>':''}
+      </div>`;
+    }).join('')
+    :'<div style="color:#333;font-size:12px;padding:1rem 0;text-align:center">Sin tareas críticas</div>');
+}
+
+// ── PAGE 0 ────────────────────────────────────────────────────────────
+function setP0F(pm,el){p0F=pm;document.querySelectorAll('#p0-pm-f .fb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderP0();}
+
+function renderP0(){
+  const q=(document.getElementById('p0-srch')||{}).value||'';
+  let list=projects.filter(p=>{
+    if(p0F==='SIN PM'&&p.pm)return false;
+    if(p0F!=='TODOS'&&p0F!=='SIN PM'&&p.pm!==p0F)return false;
+    if(q&&!p.nombre.toLowerCase().includes(q.toLowerCase()))return false;
+    return true;
+  });
+  const sections=[
+    {key:'ABIERTO',label:'Activos',dot:'#5be89a',filter:p=>p.status==='ABIERTO'},
+    {key:'MANTENIMIENTO',label:'Mantenimiento',dot:'#5b8ae8',filter:p=>p.status==='MANTENIMIENTO'},
+    {key:'EN PAUSA',label:'En pausa',dot:'#c8b000',filter:p=>p.status==='EN PAUSA'},
+    {key:'CERRADO',label:'Concluidos',dot:'#444',filter:p=>p.status==='CERRADO'},
+  ];
+  document.getElementById('p0-sections').innerHTML=sections.map(sec=>{
+    const items=list.filter(sec.filter);if(!items.length)return'';
+    const isCol=secColl[sec.key];
+    const riesgo=items.filter(p=>pSt(p)==='red').length;
+    const atencion=items.filter(p=>pSt(p)==='yellow').length;
+    return`<div class="proj-section">
+      <div class="section-hdr" onclick="toggleSec('${sec.key}')">
+        <div class="section-dot" style="background:${sec.dot}"></div>
+        <div class="section-ttl">${sec.label}</div>
+        ${riesgo?`<span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#ff7070;background:#2a080833;padding:3px 8px;border-radius:20px;border:0.5px solid #5a151544"><i class="ti ti-alert-triangle" style="font-size:11px"></i>${riesgo}</span>`:''}
+        ${atencion?`<span style="font-size:11px;font-weight:600;color:#f0b429;background:#22180033;padding:3px 8px;border-radius:20px;border:0.5px solid #3a280044">${atencion} atención</span>`:''}
+        <span class="section-count">${items.length} proyecto${items.length!==1?'s':''}</span>
+        <i class="ti ti-chevron-right section-chev ${isCol?'':'open'}"></i>
+      </div>
+      <div style="display:${isCol?'none':'block'}">
+        <table><thead><tr><th>Proyecto</th><th>PM</th><th>Tipo</th><th>Inicio</th><th>Cierre</th><th>Status</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${items.map(p=>{
+          const pmColor=pmC(p.pm)||'#444';
+          const dotColor=pSt(p)==='red'?'#ff7070':pSt(p)==='yellow'?'#f0b429':pSt(p)==='green'?'#4dd68a':'#2a2a2a';
+          const allProjTasks=(Object.values(tasks).flat()).filter(t=>t.proyecto===p.nombre);
+          const doneProjTasks=allProjTasks.filter(t=>t.status==='HECHO');
+          const pct=allProjTasks.length?Math.round(doneProjTasks.length/allProjTasks.length*100):0;
+          return`<tr onclick="openProjModal(null,${p.id})" style="cursor:pointer">
+          <td>
+            <div class="pname">
+              <span class="pname-dot" style="background:${dotColor}"></span>
+              <div>
+                <div>${p.nombre}</div>
+                ${p.ciudad?`<div class="psub">${p.ciudad}</div>`:''}
+                ${allProjTasks.length?`<div class="p-prog-wrap"><div class="p-prog" style="width:${pct}%;background:${dotColor}"></div></div>`:''}
+              </div>
+            </div>
+          </td>
+          <td onclick="event.stopPropagation()">
+            ${p.pm
+              ?`<div style="display:flex;align-items:center;gap:7px">
+                  <span class="pm-av" style="background:${pmColor}22;color:${pmColor}">${pmI(p.pm)}</span>
+                  <span style="font-size:12px;color:#888">${p.pm.charAt(0)+p.pm.slice(1).toLowerCase()}</span>
+                </div>`
+              :'<span style="color:#2a2a2a;font-size:12px">Sin PM</span>'}
+          </td>
+          <td onclick="event.stopPropagation()"><span style="font-size:11px;color:#555;background:#111;padding:3px 8px;border-radius:4px;border:0.5px solid #1e1e1e">${p.tipo||'—'}</span></td>
+          <td onclick="event.stopPropagation()">${chipD(p.inicio,2)}</td>
+          <td onclick="event.stopPropagation()">${chipD(p.cierre,7)}</td>
+          <td onclick="event.stopPropagation()"><span class="spill ${p.status==='ABIERTO'?'sp-ab':p.status==='CERRADO'?'sp-ce':p.status==='MANTENIMIENTO'?'sp-ma':'sp-pa'}" onclick="cycleP(${p.id},this)">${p.status==='ABIERTO'?'Activo':p.status==='CERRADO'?'Concluido':p.status==='EN PAUSA'?'En pausa':'Mantenimiento'}</span></td>
+          <td onclick="event.stopPropagation()">${chipSt(pSt(p))}</td>
+          <td onclick="event.stopPropagation()"><button class="bx" onclick="openProjModal(null,${p.id})"><i class="ti ti-edit"></i></button></td>
+        </tr>`;}).join('')}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleSec(key){secColl[key]=!secColl[key];renderP0();}
+
+
+// ── PAGE 2 — GANTT ────────────────────────────────────────────────────
+function setGF(pm,el){ganttPM=pm;document.querySelectorAll('#p2-f .fb:not(.gv-btn)').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderP2();}
+
+function toggleGanttSec(el){
+  var key=el.getAttribute('data-gkey');
+  secColl[key]=!secColl[key];
+  renderP2();
+}
+
+function renderP2(){
+  const wrap=document.getElementById('p2-gantt-wrap');
+  const el=document.getElementById('p2-gantt');
+
+  // Filtros ya construidos en buildUI
+
+  var now=new Date(today);
+  var minD,maxD;
+  if(ganttView==='month'){
+    minD=new Date(now.getFullYear(),now.getMonth()-1,1);
+    maxD=new Date(now.getFullYear(),now.getMonth()+2,0);
+  } else if(ganttView==='quarter'){
+    var qm=Math.floor(now.getMonth()/3)*3;
+    minD=new Date(now.getFullYear(),qm-1,1);
+    maxD=new Date(now.getFullYear(),qm+4,0);
+  } else {
+    minD=new Date(now.getFullYear()-1,0,1);
+    maxD=new Date(now.getFullYear()+1,11,31);
+  }
+  var totalDays=Math.max(1,dDiff(minD,maxD));
+  var LW=190;
+  var availW=wrap?wrap.offsetWidth||900:900;
+  var TW=Math.max(500,availW-LW-32);
+
+  function px(d){if(!d)return null;var v=Math.round(dDiff(minD,d)/totalDays*TW);return Math.max(0,Math.min(TW,v));}
+
+  // Cabecera meses
+  var mH='';
+  var mc=new Date(minD.getFullYear(),minD.getMonth(),1);
+  while(mc<=maxD){
+    var x=px(mc);
+    var lbl=mc.toLocaleDateString('es-MX',{month:'short',year:ganttView==='year'?'2-digit':undefined});
+    mH+='<div style="position:absolute;left:'+x+'px;font-size:10px;color:#2a2a2a;white-space:nowrap;border-left:0.5px solid #1a1a1a;padding-left:3px;height:100%;display:flex;align-items:center">'+lbl+'</div>';
+    mc.setMonth(mc.getMonth()+1);
+  }
+  var tPx=px(today);
+  var todayLbl=today.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}).toUpperCase();
+  var todayBar=tPx!==null?'<div style="position:absolute;top:0;bottom:0;left:'+tPx+'px;width:1.5px;background:#C4622D;z-index:5;opacity:.8"></div>':'';
+  var todayHdr=tPx!==null?'<div style="position:absolute;top:0;bottom:0;left:'+tPx+'px;width:1.5px;background:#C4622D;z-index:5"></div><div style="position:absolute;top:3px;left:'+(tPx-18)+'px;background:#C4622D;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;z-index:6">'+todayLbl+'</div>':'';
+
+  function semColor(p){
+    var ci=pD(p.cierre||(p.hitos&&p.hitos.cierre));
+    if(!ci)return{bar:'#1a1a1a',border:'#252525',text:'#333'};
+    var d=dDiff(today,ci);
+    if(d<0)return{bar:'#5a0a0a',border:'#9a1a1a',text:'#ff9090'};
+    if(d<=14)return{bar:'#3d2f00',border:'#7a5200',text:'#f0c45b'};
+    return{bar:'#0d2a1a',border:'#1a5a30',text:'#5be89a'};
+  }
+
+  function buildRow(p){
+    var isMant=p.status==='MANTENIMIENTO'||(p.tipo||'').toUpperCase().includes('MANT');
+    var sc=semColor(p);
+    var pmColor=pmC(p.pm)||'#444';
+    var pmInit=p.pm?p.pm.charAt(0)+p.pm.slice(1,2).toLowerCase():'—';
+    var h=p.hitos||{};
+    var segs='';
+
+    // Barra base inicio->cierre
+    var st=pD(p.inicio),en=pD(p.cierre);
+    if(st&&en){
+      var x1=px(st),x2=px(en);
+      var w=Math.max(4,x2-x1);
+      segs+='<div style="position:absolute;top:5px;left:'+x1+'px;width:'+w+'px;height:18px;border-radius:4px;background:'+sc.bar+';border:1px solid '+sc.border+';cursor:pointer" onclick="openProjModal(null,'+p.id+')" title="'+p.nombre+'"></div>';
+    }
+
+    // Segmento TENDER y OBRA solo si no es mantenimiento
+    if(!isMant){
+    if(h.tender||h.tenderFin){
+      var tBase=pD(h.tender)||pD(p.inicio);
+      var tEnd=pD(h.tenderFin)||pD(h.tender);
+      if(tBase&&tEnd&&px(tBase)!==null&&px(tEnd)!==null){
+        var x1t=px(tBase),x2t=px(tEnd),wt=Math.max(3,x2t-x1t);
+        var ov=dDiff(today,tEnd)<0&&p.status!=='CERRADO';
+        segs+='<div style="position:absolute;top:5px;left:'+x1t+'px;width:'+wt+'px;height:18px;border-radius:4px;background:'+(ov?'#2a1000':'#1a2535')+';border:1px solid '+(ov?'#7a2a00':'#2a4060')+';cursor:pointer;overflow:hidden" onclick="openProjModal(null,'+p.id+')" title="Tender: '+fD(tBase)+' - '+fD(tEnd)+'">'+(wt>20?'<span style="position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:9px;color:'+(ov?'#ff8060':'#5b8ae8')+';font-weight:700;white-space:nowrap">Tender</span>':'')+'</div>';
+      } else if(tBase&&px(tBase)!==null){
+        var xt=px(tBase);
+        segs+='<div style="position:absolute;top:5px;left:'+(xt-3)+'px;width:6px;height:18px;border-radius:3px;background:#1a2535;border:1px solid #2a4060" title="Inicio Tender: '+fD(tBase)+'"></div>';
+      }
+    }
+
+    // Segmento OBRA
+    if(h.obra){
+      var oD=pD(h.obra),cD=pD(h.cierre||p.cierre);
+      if(oD&&cD&&px(oD)!==null&&px(cD)!==null){
+        var x1o=px(oD),x2o=px(cD),wo=Math.max(3,x2o-x1o);
+        var ovo=dDiff(today,cD)<0&&p.status!=='CERRADO';
+        segs+='<div style="position:absolute;top:5px;left:'+x1o+'px;width:'+wo+'px;height:18px;background:'+(ovo?'#5a1500':'#2a1800')+';border:1px solid '+(ovo?'#aa2200':'#7a3a00')+';cursor:pointer;overflow:hidden" onclick="openProjModal(null,'+p.id+')" title="Obra '+fD(oD)+' - '+fD(cD)+'">'+(wo>16?'<span style="position:absolute;left:3px;top:50%;transform:translateY(-50%);font-size:9px;color:'+(ovo?'#ff6040':'#C4622D')+';font-weight:700">O</span>':'')+'</div>';
+      }
+    }
+
+    } // fin !isMant
+    // Marcador cierre
+    if(!isMant&&h.cierre){
+      var xcD=px(pD(h.cierre));
+      if(xcD!==null){
+        var ovc=dDiff(today,pD(h.cierre))<0&&p.status!=='CERRADO';
+        segs+='<div style="position:absolute;top:3px;left:'+(xcD-2)+'px;width:4px;height:22px;background:'+(ovc?'#ff6040':'#5be89a')+';border-radius:2px;z-index:3" title="Cierre '+fD(pD(h.cierre))+'"></div>';
+      }
+    }
+
+    var ci=pD(p.cierre||(p.hitos&&p.hitos.cierre));
+    var dTag='';
+    if(ci&&p.status!=='CERRADO'){
+      var d=dDiff(today,ci);
+      if(d<0)dTag='<span style="font-size:10px;color:#ff9090;flex-shrink:0">'+Math.abs(d)+'d venc.</span>';
+      else if(d<=14)dTag='<span style="font-size:10px;color:#f0c45b;flex-shrink:0">'+d+'d</span>';
+    }
+
+    var lbl=p.nombre.length>26?p.nombre.slice(0,24)+'…':p.nombre;
+    return '<div class="g-row" style="margin-bottom:4px">'
+      +'<div style="width:'+LW+'px;display:flex;align-items:center;gap:5px;padding-right:8px;flex-shrink:0;overflow:hidden;cursor:pointer" onclick="openProjModal(null,'+p.id+')" title="Clic para editar fechas">'
+      +'<span style="width:18px;height:18px;border-radius:4px;background:'+pmColor+'22;color:'+pmColor+';font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">'+pmInit+'</span>'
+      +'<span style="font-size:12px;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;border-bottom:0.5px dashed #2a2a2a" title="'+p.nombre+'">'+lbl+'</span>'
+      +dTag
+      +'</div>'
+      +'<div class="g-track" style="width:'+TW+'px;height:28px;position:relative;background:#0a0a0a;border-radius:4px;overflow:visible;flex-shrink:0">'
+      +todayBar+segs
+      +'</div></div>';
+  }
+
+  function buildSection(title,dot,list,key){
+    if(!list.length)return'';
+    var sorted=list.slice().sort(function(a,b){
+      var da=pD(a.cierre||(a.hitos&&a.hitos.cierre))||new Date(9999,0);
+      var db=pD(b.cierre||(b.hitos&&b.hitos.cierre))||new Date(9999,0);
+      return da-db;
+    });
+    var isCol=secColl['g2_'+key];
+    var rows=sorted.map(buildRow).join('');
+    return '<div style="margin-bottom:1.5rem">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#111;border-radius:8px;cursor:pointer;border:0.5px solid #1e1e1e;margin-bottom:6px;user-select:none" data-gkey="g2_'+key+'" onclick="toggleGanttSec(this)">'  
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dot+';flex-shrink:0"></div>'
+      +'<div style="font-size:13px;font-weight:500;color:#ddd;flex:1">'+title+'</div>'
+      +'<span style="font-size:11px;color:#444;background:#0e0e0e;padding:2px 8px;border-radius:10px;border:0.5px solid #1e1e1e">'+list.length+'</span>'
+      +'<i class="ti ti-chevron-right" style="color:#333;font-size:13px;transform:'+(isCol?'':'rotate(90deg)')+';transition:transform .2s"></i>'
+      +'</div>'
+      +(isCol?'':'<div style="overflow-x:auto">'
+        +'<div style="min-width:'+(LW+TW+24)+'px">'
+        +'<div style="display:flex;margin-bottom:6px;padding-left:'+LW+'px">'
+        +'<div style="width:'+TW+'px;position:relative;height:20px;background:#080808;border-radius:4px;overflow:hidden">'+mH+todayHdr+'</div>'
+        +'</div>'
+        +rows
+        +'</div></div>')
+      +'</div>';
+  }
+
+  var all=projects.filter(function(p){
+    if(ganttPM==='SIN PM')return !p.pm;
+    if(ganttPM!=='TODOS'&&p.pm!==ganttPM)return false;
+    return true;
+  });
+
+  // Separar en 3 grupos por tipo/status
+  var tenders=all.filter(function(p){
+    return (p.tipo||'').toUpperCase()==='TENDER';
+  });
+  var mantenimientos=all.filter(function(p){
+    var t=(p.tipo||'').toUpperCase();
+    return p.status==='MANTENIMIENTO'||t==='MANTENIMIENTO'||t==='POST VENTA';
+  });
+  var cerrados=all.filter(function(p){
+    return p.status==='CERRADO';
+  });
+  var obras=all.filter(function(p){
+    return tenders.indexOf(p)===-1&&mantenimientos.indexOf(p)===-1&&cerrados.indexOf(p)===-1;
+  });
+
+  var html='';
+  html+=buildSection('Tenders / Licitaciones','#5b8ae8',tenders,'tender');
+  html+=buildSection('Obras Activas','#C4622D',obras,'obras');
+  html+=buildSection('Mantenimientos','#5be89a',mantenimientos,'mant');
+
+  // ── Obras Cerradas agrupadas por mes ───────────────────────────────
+  if(cerrados.length){
+    var isColCerr=secColl['g2_cerradas'];
+    var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    html+='<div style="margin-bottom:1.5rem">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#111;border-radius:8px;cursor:pointer;border:0.5px solid #1e1e1e;margin-bottom:6px;user-select:none" data-gkey="g2_cerradas" onclick="toggleGanttSec(this)">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:#444;flex-shrink:0"></div>'
+      +'<div style="font-size:13px;font-weight:500;color:#555;flex:1">Obras Cerradas</div>'
+      +'<span style="font-size:11px;color:#444;background:#0e0e0e;padding:2px 8px;border-radius:10px;border:0.5px solid #1e1e1e">'+cerrados.length+'</span>'
+      +'<i class="ti ti-chevron-right" style="color:#333;font-size:13px;transform:'+(isColCerr?'':'rotate(90deg)')+';transition:transform .2s"></i>'
+      +'</div>';
+
+    if(!isColCerr){
+      // Agrupar por año+mes
+      var byM={};
+      cerrados.forEach(function(p){
+        var d=pD(p.cierre||(p.hitos&&p.hitos.cierre));
+        var key=d?(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0')):'9999-12';
+        if(!byM[key])byM[key]=[];
+        byM[key].push(p);
+      });
+      // Ordenar de más reciente a más antiguo
+      var mKeys=Object.keys(byM).sort(function(a,b){return b.localeCompare(a);});
+
+      mKeys.forEach(function(mk){
+        var list=byM[mk];
+        var isColM=secColl['g2_m_'+mk];
+        var mLabel=mk==='9999-12'?'Sin fecha de cierre':(function(){
+          var yr=mk.split('-')[0];
+          var mo=parseInt(mk.split('-')[1]);
+          return MESES[mo]+' '+yr;
+        })();
+
+        html+='<div style="margin-bottom:6px;margin-left:12px">'
+          +'<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:#0e0e0e;border-radius:6px;cursor:pointer;border:0.5px solid #1a1a1a;margin-bottom:4px;user-select:none" data-gkey="g2_m_'+mk+'" onclick="toggleGanttSec(this)">'
+          +'<div style="font-size:11px;font-weight:600;color:#444;flex:1;letter-spacing:.03em">'+mLabel+'</div>'
+          +'<span style="font-size:10px;color:#333;background:#111;padding:1px 6px;border-radius:8px">'+list.length+'</span>'
+          +'<i class="ti ti-chevron-right" style="color:#2a2a2a;font-size:12px;transform:'+(isColM?'':'rotate(90deg)')+';transition:transform .2s"></i>'
+          +'</div>';
+
+        if(!isColM){
+          var sorted=list.slice().sort(function(a,b){
+            var da=pD(a.cierre||(a.hitos&&a.hitos.cierre))||new Date(0);
+            var db=pD(b.cierre||(b.hitos&&b.hitos.cierre))||new Date(0);
+            return db-da;
+          });
+          html+='<div style="overflow-x:auto">'
+            +'<div style="min-width:'+(LW+TW+24)+'px;opacity:.6">'
+            +'<div style="display:flex;margin-bottom:4px;padding-left:'+LW+'px">'
+            +'<div style="width:'+TW+'px;position:relative;height:20px;background:#080808;border-radius:4px;overflow:hidden">'+mH+todayHdr+'</div>'
+            +'</div>'
+            +sorted.map(function(p){return buildRow(p);}).join('')
+            +'</div></div>';
+        }
+        html+='</div>';
+      });
+    }
+    html+='</div>';
+  }
+
+  if(!html)html='<div style="color:#333;text-align:center;padding:3rem;font-size:13px">Sin proyectos para mostrar.</div>';
+
+  // Leyenda
+  html+='<div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;padding:10px 0">'
+    +'<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#555"><span style="width:10px;height:10px;border-radius:2px;background:#1a2535;border:1px solid #2a4060;display:inline-block"></span>Tender (T)</span>'
+    +'<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#555"><span style="width:10px;height:10px;border-radius:2px;background:#2a1800;border:1px solid #7a3a00;display:inline-block"></span>Obra (O)</span>'
+    +'<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#555"><span style="width:4px;height:10px;border-radius:2px;background:#5be89a;display:inline-block"></span>Cierre</span>'
+    +'<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#555"><span style="width:10px;height:10px;border-radius:2px;background:#5a0a0a;border:1px solid #9a1a1a;display:inline-block"></span>Vencido</span>'
+    +'<span style="font-size:11px;color:#2a2a2a;margin-left:8px">Clic en barra = editar proyecto</span>'
+    +'</div>';
+
+  el.innerHTML=html;
+}
+
+// ── TASKS ─────────────────────────────────────────────────────────────
+function swPM(pm,el){ePM=pm;document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderTasks();}
+function setTF(type,val,el){tF[type]=val;const g=type==='status'?'t-sf':'t-pf';document.querySelectorAll(`#${g} .fb`).forEach(b=>b.classList.remove('active'));el.classList.add('active');renderTasks();}
+
+function renderTasks(){
+  const all=tasks[ePM]||[];
+  const active=all.filter(t=>t.status!=='HECHO');
+  const done=all.filter(t=>t.status==='HECHO');
+  const q=(document.getElementById('t-srch')||{}).value||'';
+  const fil=active.filter(t=>{
+    if(tF.status!=='TODOS'&&t.status!==tF.status)return false;
+    if(tF.pri!=='TODOS'&&t.prioridad!==tF.pri)return false;
+    if(q&&!t.actividad.toLowerCase().includes(q.toLowerCase())&&!(t.proyecto||'').toLowerCase().includes(q.toLowerCase()))return false;
+    return true;
+  });
+  const cr=active.filter(t=>t.prioridad==='CRÍTICA').length;
+  const ov=active.filter(t=>{const d=pD(t.fecha);return d&&dDiff(today,d)<0;}).length;
+  document.getElementById('t-sum').innerHTML=`<div class="sb2"><b>${all.length}</b> tareas</div><div class="sb2" style="color:#222">|</div><div class="sb2"><b style="color:#5be89a">${done.length}</b> completadas</div><div class="sb2"><b style="color:#ff9090">${cr}</b> críticas</div>${ov?`<div class="sb2"><b style="color:#ff9090">${ov}</b> vencidas</div>`:''}`;
+
+  const groups={};
+  for(const t of fil){const k=t.proyecto||'General';if(!groups[k])groups[k]=[];groups[k].push(t);}
+
+  const board=document.getElementById('task-board');
+  let html=Object.entries(groups).map(([proj,ptasks])=>{
+    const color=gc(proj);
+    const projDone=all.filter(t=>t.proyecto===proj&&t.status==='HECHO').length;
+    const projTotal=all.filter(t=>t.proyecto===proj).length;
+    const pct=projTotal>0?Math.round(projDone/projTotal*100):0;
+    const crits=ptasks.filter(t=>t.prioridad==='CRÍTICA').length;
+    const key=ePM+'_'+proj;const isCol=collapsed[key];
+    const priOrder={'CRÍTICA':0,'ALTA':1,'MEDIA':2,'BAJA':3};
+    const rows=[...ptasks].sort((a,b)=>(priOrder[a.prioridad]??9)-(priOrder[b.prioridad]??9)).map(t=>`
+      <div class="trow" style="cursor:default">
+        <input type="checkbox" class="tcb" onchange="toggleDone(${t.id},'${ePM}',this.checked)">
+        <span class="ttxt">${t.actividad}</span>
+        <div>${hChip(t,ePM)}</div>
+        <div>${pChip(t,ePM)}</div>
+        <div>${dChip(t,ePM)}</div>
+        <div style="display:flex;align-items:center;gap:5px">
+          ${scChip(t,ePM)}
+          <div class="tact">
+            <button id="cmtbtn-${ePM}-${t.id}" class="bx cmt-toggle" onclick="toggleCmtArea('${ePM}',${t.id})" title="Comentarios">
+              <i class="ti ti-message"></i>
+              <span id="cmtbdg-${ePM}-${t.id}" class="cmt-badge" style="display:none"></span>
+            </button>
+            <button class="bx" onclick="openTaskModal(${t.id},'${ePM}')"><i class="ti ti-edit"></i></button>
+            <button class="bx" onclick="confDelT(${t.id},'${ePM}')"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      </div>
+      <div id="cmt-${ePM}-${t.id}" class="cmt-area" style="display:none">
+        <div id="cmtlist-${ePM}-${t.id}" class="cmt-list"></div>
+        <div class="cmt-input-row">
+          <textarea id="cmti-${ePM}-${t.id}" class="cmt-inp" placeholder="Escribe un comentario..." rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitCmt('${ePM}',${t.id})}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+          <button class="cmt-send" onclick="submitCmt('${ePM}',${t.id})">Enviar</button>
+        </div>
+      </div>`).join('');
+    return`<div class="proj-block">
+      <div class="proj-hdr" onclick="togCol('${key}')">
+        <div class="proj-dot" style="background:${color}"></div>
+        <div class="proj-ttl">${proj}</div>
+        <div class="proj-meta">
+          ${crits?`<span class="crit-b"><i class="ti ti-alert-triangle"></i> ${crits}</span>`:''}
+          <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%;background:${color}"></div></div>
+          <div class="pcount">${projDone}/${projTotal}</div>
+        </div>
+        <i class="ti ti-chevron-right chev ${isCol?'':'open'}"></i>
+      </div>
+      <div class="task-tbl" style="border-left-color:${color};display:${isCol?'none':'block'}">
+        ${rows}
+        <div class="add-il" onclick="focIL('${proj}')">
+          <i class="ti ti-plus"></i>
+          <input class="il-in" id="il-${encodeURIComponent(proj)}" placeholder="+ Agregar tarea rápida..." onkeydown="ilAdd(event,'${proj}')" onclick="event.stopPropagation()">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if(done.length){
+    const archKey=ePM+'_archive';const archOpen=collapsed[archKey];
+    const archGroups={};
+    for(const t of done){const k=t.proyecto||'General';if(!archGroups[k])archGroups[k]=[];archGroups[k].push(t);}
+    const archRows=Object.entries(archGroups).flatMap(([proj,ts])=>
+      ts.map(t=>`<div class="trow done-r">
+        <input type="checkbox" class="tcb" checked onchange="toggleDone(${t.id},'${ePM}',this.checked)">
+        <span class="ttxt done">${t.actividad}</span>
+        <div>${hChip(t,ePM)}</div>
+        <div>${pChip(t,ePM)}</div>
+        <div style="font-size:11px;color:#444">${t.completedAt?fDT(new Date(t.completedAt)):'—'}</div>
+        <div><span class="sc-chip sch">✓ Hecho</span></div>
+      </div>`)
+    ).join('');
+    // Agrupar HECHO por mes
+    const MESES_A=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const byM={};
+    for(const t of done){
+      const d=t.completedAt?new Date(t.completedAt):null;
+      const key=d?(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0')):'9999-12';
+      if(!byM[key])byM[key]=[];
+      byM[key].push(t);
+    }
+    const mKeys=Object.keys(byM).sort((a,b)=>b.localeCompare(a));
+
+    let cemHtml='<div class="archive-toggle" onclick="togCol(\''+archKey+'\')"><i class="ti ti-archive" style="font-size:14px"></i><span>Cementerio — '+done.length+' tarea'+(done.length!==1?'s':'')+' completada'+(done.length!==1?'s':'')+'</span><i class="ti ti-chevron-right chev '+(archOpen?'':'open')+'" style="margin-left:4px"></i></div>';
+    cemHtml+='<div class="archive-section" style="display:'+(archOpen?'none':'block')+'">';
+    mKeys.forEach(function(mk){
+      const list=byM[mk];
+      const isColM=collapsed[ePM+'_m_'+mk];
+      const yr=mk.split('-')[0];
+      const mo=parseInt(mk.split('-')[1]);
+      const mLabel=mk==='9999-12'?'Sin fecha':(MESES_A[mo]+' '+yr);
+      const colKey=ePM+'_m_'+mk;
+      cemHtml+='<div style="margin-bottom:4px">';
+      cemHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#0e0e0e;border-radius:6px;cursor:pointer;border:0.5px solid #1a1a1a;margin-bottom:3px" onclick="collapsed[\''+colKey+'\''+']=!collapsed[\''+colKey+'\'];renderTasks()">';
+      cemHtml+='<span style="font-size:11px;font-weight:600;color:#4dd68a;flex:1">'+mLabel+'</span>';
+      cemHtml+='<span style="font-size:10px;color:#2a2a2a;background:#111;padding:1px 6px;border-radius:8px">'+list.length+'</span>';
+      cemHtml+='<i class="ti ti-chevron-right" style="color:#222;font-size:11px;transform:'+(isColM?'':'rotate(90deg)')+'"></i>';
+      cemHtml+='</div>';
+      if(!isColM){
+        list.forEach(function(t){
+          const fch=t.completedAt?fDT(new Date(t.completedAt)):'—';
+          cemHtml+='<div class="trow done-r">';
+          cemHtml+='<input type="checkbox" class="tcb" checked onchange="toggleDone('+t.id+',\''+ePM+'\',this.checked)">';
+          cemHtml+='<span class="ttxt done">'+t.actividad+'</span>';
+          cemHtml+='<div>'+hChip(t,ePM)+'</div>';
+          cemHtml+='<div>'+pChip(t,ePM)+'</div>';
+          cemHtml+='<div style="font-size:11px;color:#333">'+fch+'</div>';
+          cemHtml+='<div><span class="sc-chip sch">✓ Hecho</span></div>';
+          cemHtml+='</div>';
+        });
+      }
+      cemHtml+='</div>';
+    });
+    cemHtml+='</div>';
+    html+=cemHtml;
+  }
+  if(!html)html='<div style="text-align:center;padding:2rem;color:#333;font-size:14px">Sin tareas. Agrega la primera.</div>';
+  board.innerHTML=html;
+  // Inicializar badges de comentarios
+  for(const pm of PMS.map(p=>p.id)){
+    const ts=(tasks[pm]||[]);
+    ts.forEach(t=>{
+      const n=getCmts(pm,t.id).length;
+      const badge=document.getElementById('cmtbdg-'+pm+'-'+t.id);
+      const btn=document.getElementById('cmtbtn-'+pm+'-'+t.id);
+      if(badge){badge.textContent=n;badge.style.display=n?'flex':'none';}
+      if(btn&&n)btn.classList.add('has-cmts');
+    });
+  }
+}
+
+function togCol(key){collapsed[key]=!collapsed[key];renderTasks();}
+function focIL(proj){const el=document.getElementById('il-'+encodeURIComponent(proj));if(el)setTimeout(()=>el.focus(),50);}
+async function ilAdd(e,proj){
+  if(e.key!=='Enter')return;const txt=e.target.value.trim();if(!txt)return;
+  if(!tasks[ePM])tasks[ePM]=[];
+  tasks[ePM].push({id:Date.now(),proyecto:proj,actividad:txt,hito:'OBRA',prioridad:'MEDIA',fecha:null,status:'ACTIVO'});
+  saveT();renderTasks();setTimeout(()=>focIL(proj),100);
+}
+function showStatusDD(e,id,pm){
+  e.stopPropagation();
+  document.querySelectorAll('.status-dd').forEach(d=>d.remove());
+  const t=(tasks[pm]||[]).find(x=>x.id===id);
+  if(!t)return;
+  const opts=[
+    {v:'ACTIVO',   cls:'sca',lbl:'● Activo'},
+    {v:'SEGUIMIENTO',cls:'scs',lbl:'◐ Seguimiento'},
+    {v:'HECHO',    cls:'sch',lbl:'✓ Hecho'},
+  ];
+  const dd=document.createElement('div');
+  dd.className='inline-dd status-dd';
+  const rect=e.target.getBoundingClientRect();
+  dd.style.cssText='top:'+(rect.bottom+4+window.scrollY)+'px;left:'+(rect.left+window.scrollX)+'px;min-width:140px';
+  opts.forEach(o=>{
+    const d=document.createElement('div');
+    d.innerHTML='<span class="sc-chip '+o.cls+'" style="pointer-events:none">'+o.lbl+'</span>';
+    d.style.cssText='padding:5px 8px;cursor:pointer;border-radius:5px';
+    d.onmouseenter=()=>d.style.background='#C4622D18';
+    d.onmouseleave=()=>d.style.background='';
+    if(o.v===t.status)d.style.background='#C4622D12';
+    d.onclick=()=>{
+      if(o.v==='HECHO')t.completedAt=new Date().toISOString();
+      else delete t.completedAt;
+      t.status=o.v;saveT();renderTasks();dd.remove();
+    };
+    dd.appendChild(d);
+  });
+  document.body.appendChild(dd);
+  setTimeout(()=>document.addEventListener('click',function h(ev){
+    if(!dd.contains(ev.target)){dd.remove();document.removeEventListener('click',h);}
+  }),10);
+}
+function toggleDone(id,pm,done){
+  const t=(tasks[pm]||[]).find(x=>x.id===id);
+  if(t){if(done){t.status='HECHO';t.completedAt=new Date().toISOString();}else{t.status='ACTIVO';delete t.completedAt;}saveT();renderTasks();}
+}
+function confDelT(id,pm){if(confirm('¿Eliminar esta tarea?')){tasks[pm]=tasks[pm].filter(x=>x.id!==id);saveT();renderTasks();}}
+
+// ── PROJECT MODAL ─────────────────────────────────────────────────────
+function openProjModal(tipo=null,id=null){
+  eProjId=id;
+  document.getElementById('pm-ttl').textContent=id?'Editar proyecto':'Nuevo proyecto';
+  document.getElementById('pm-del').style.display=id?'flex':'none';
+  if(id){
+    const p=projects.find(x=>x.id===id);
+    document.getElementById('pm-nom').value=p.nombre;
+    document.getElementById('pm-pm').value=p.pm||'';
+    document.getElementById('pm-tipo').value=p.tipo||'';
+    document.getElementById('pm-ciudad').value=p.ciudad||'';
+    document.getElementById('pm-ini').value=p.inicio||'';
+    document.getElementById('pm-cie').value=p.cierre||'';
+    document.getElementById('pm-st').value=p.status||'ABIERTO';
+    document.getElementById('pm-h-tender').value=(p.hitos&&p.hitos.tender)||'';
+    document.getElementById('pm-h-tender-fin').value=(p.hitos&&p.hitos.tenderFin)||'';
+    document.getElementById('pm-h-obra').value=(p.hitos&&p.hitos.obra)||'';
+    document.getElementById('pm-h-cierre').value=(p.hitos&&p.hitos.cierre)||'';
+  } else {
+    ['pm-nom','pm-ciudad','pm-ini','pm-cie','pm-h-tender','pm-h-tender-fin','pm-h-obra','pm-h-cierre'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('pm-tipo').value='';
+    document.getElementById('pm-pm').value='';document.getElementById('pm-st').value='ABIERTO';
+    if(tipo)document.getElementById('pm-tipo').value=tipo;
+  }
+  document.getElementById('proj-modal').classList.add('open');
+}
+function saveProj(){
+  const n=document.getElementById('pm-nom').value.trim();if(!n)return;
+  const hTender=document.getElementById('pm-h-tender').value||null;
+  const hTenderFin=document.getElementById('pm-h-tender-fin').value||null;
+  const hObra=document.getElementById('pm-h-obra').value||null;
+  const hCierre=document.getElementById('pm-h-cierre').value||null;
+  const d={nombre:n,pm:document.getElementById('pm-pm').value,tipo:document.getElementById('pm-tipo').value,ciudad:document.getElementById('pm-ciudad').value,inicio:document.getElementById('pm-ini').value||null,cierre:document.getElementById('pm-cie').value||null,status:document.getElementById('pm-st').value,hitos:{tender:hTender,tenderFin:hTenderFin,obra:hObra,cierre:hCierre}};
+  if(eProjId){const i=projects.findIndex(x=>x.id===eProjId);projects[i]={...projects[i],...d};}
+  else{d.id=Date.now();projects.push(d);}
+  saveP();closeModals();renderP0();buildNotifications();
+  if(document.getElementById('page-dash').classList.contains('active'))renderDash();
+  if(document.getElementById('page-2').classList.contains('active'))setTimeout(renderP2,50);
+}
+function delProj(){if(!confirm('¿Eliminar este proyecto?'))return;projects=projects.filter(x=>x.id!==eProjId);saveP();closeModals();renderP0();}
+function cycleP(id, el){
+  // Cerrar cualquier dropdown abierto
+  document.querySelectorAll('.status-dd').forEach(d=>d.remove());
+  const p=projects.find(x=>x.id===id);
+  if(!p)return;
+  const opts=[
+    {v:'ABIERTO',    lbl:'Activo',       cls:'sp-ab'},
+    {v:'EN PAUSA',   lbl:'En pausa',     cls:'sp-pa'},
+    {v:'MANTENIMIENTO',lbl:'Mantenimiento',cls:'sp-ma'},
+    {v:'CERRADO',    lbl:'Concluido',    cls:'sp-ce'},
+  ];
+  const dd=document.createElement('div');
+  dd.className='inline-dd status-dd';
+  const rect=el.getBoundingClientRect();
+  dd.style.cssText=`top:${rect.bottom+4+window.scrollY}px;left:${rect.left+window.scrollX}px`;
+  opts.forEach(o=>{
+    const d=document.createElement('div');
+    d.innerHTML=`<span class="spill ${o.cls}" style="pointer-events:none">${o.lbl}</span>`;
+    d.style.cssText='padding:5px 8px;cursor:pointer;border-radius:5px';
+    d.onmouseenter=()=>d.style.background='#C4622D18';
+    d.onmouseleave=()=>d.style.background='';
+    if(o.v===p.status) d.style.background='#C4622D12';
+    d.onclick=()=>{p.status=o.v;saveP();renderP0();dd.remove();};
+    dd.appendChild(d);
+  });
+  document.body.appendChild(dd);
+  // Cerrar al click fuera
+  setTimeout(()=>document.addEventListener('click',function h(e){
+    if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',h);}
+  }),10);
+}
+
+// ── TASK MODAL ────────────────────────────────────────────────────────
+function openTaskModal(id=null,pm=null){
+  eTaskId=id;if(pm)ePM=pm;
+  document.getElementById('tm-ttl').textContent=id?'Editar tarea':`Nueva tarea — ${ePM.charAt(0)+ePM.slice(1).toLowerCase()}`;
+  document.getElementById('tm-del').style.display=id?'flex':'none';
+  if(id){
+    const t=(tasks[ePM]||[]).find(x=>x.id===id);if(!t)return;
+    document.getElementById('tm-proj').value=t.proyecto||'';
+    document.getElementById('tm-act').value=t.actividad||'';
+    document.getElementById('tm-hito').value=t.hito||'OBRA';
+    document.getElementById('tm-pri').value=t.prioridad||'ALTA';
+    document.getElementById('tm-fecha').value=t.fecha||'';
+    document.getElementById('tm-st').value=t.status||'ACTIVO';
+  } else {
+    ['tm-proj','tm-act','tm-fecha'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('tm-hito').value='OBRA';document.getElementById('tm-pri').value='ALTA';document.getElementById('tm-st').value='ACTIVO';
+  }
+  document.getElementById('task-modal').classList.add('open');
+}
+function saveTask(){
+  const a=document.getElementById('tm-act').value.trim();if(!a)return;
+  const d={actividad:a,proyecto:document.getElementById('tm-proj').value||'General',hito:document.getElementById('tm-hito').value,prioridad:document.getElementById('tm-pri').value,fecha:document.getElementById('tm-fecha').value||null,status:document.getElementById('tm-st').value};
+  if(!tasks[ePM])tasks[ePM]=[];
+  if(eTaskId){const i=tasks[ePM].findIndex(x=>x.id===eTaskId);tasks[ePM][i]={...tasks[ePM][i],...d};}
+  else{d.id=Date.now();tasks[ePM].push(d);}
+  saveT();closeModals();renderTasks();
+}
+function delTask(){if(!confirm('¿Eliminar esta tarea?'))return;tasks[ePM]=tasks[ePM].filter(x=>x.id!==eTaskId);saveT();closeModals();renderTasks();}
+function closeModals(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('open'));}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+window.SB=supabase.createClient('https://gicfcwdmlmzehylbagui.supabase.co','sb_publishable_hAPMhVDT364KVLOUWm48Aw_BDSfpECt');
+loadData();
+buildUI();
+buildNotifications();
+renderDash();
+
+// Cargar datos de Supabase y refrescar UI
+async function loadFromSupabase(){
+  try{
+    const [{data:pData},{data:tData},{data:pmData}]=await Promise.all([
+      window.SB.from('projects').select('*').order('id'),
+      window.SB.from('tasks').select('*').order('orden'),
+      window.SB.from('pms').select('*')
+    ]);
+    if(pData&&pData.length){
+      projects=pData.map(p=>({id:p.id,nombre:p.nombre,pm:p.pm,tipo:p.tipo,ciudad:p.ciudad,inicio:p.inicio,cierre:p.cierre,status:p.status,hitos:p.hitos||{}}));
+      try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}
+    }
+    if(tData&&tData.length){
+      const g={};
+      tData.forEach(t=>{const pm=t.pm||'SIN_PM';if(!g[pm])g[pm]=[];g[pm].push({id:t.id,proyecto:t.proyecto,actividad:t.actividad,hito:t.hito,prioridad:t.prioridad,fecha:t.fecha,status:t.status,orden:t.orden||0,completedAt:t.completed_at});});
+      tasks=g;
+      try{localStorage.setItem('ktk_t2',JSON.stringify(tasks));}catch(e){}
+    }
+    if(pmData&&pmData.length){
+      PMS=pmData.map(p=>({id:p.id,i:p.iniciales,c:p.color}));
+      try{localStorage.setItem('ktk_pms',JSON.stringify(PMS));}catch(e){}
+      buildUI();
+    }
+    renderDash();renderP0();renderTasks();buildNotifications();
+  }catch(e){console.warn('Supabase load:',e);}
+}
+loadFromSupabase();
+// ── ADMIN PMs ────────────────────────────────────────────────────────────
+const PM_COLORS=['#C4622D','#7A9E87','#7A9EC4','#C4A862','#9E7AC4','#C46262','#62C4A8','#A8C462','#6278C4','#C4A07A'];
+
+function renderPMAdmin(){
+  const el=document.getElementById('pm-admin-list');
+  if(!el)return;
+  if(!PMS.length){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#444">Sin PMs. Agrega el primero.</div>';return;}
+  el.innerHTML=PMS.map((pm,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid #1a1a1a">
+      <span style="width:28px;height:28px;border-radius:7px;background:${pm.c}22;color:${pm.c};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${pm.i}</span>
+      <span style="flex:1;font-size:13px;color:#ddd">${pm.id}</span>
+      <div style="display:flex;gap:4px">
+        ${PM_COLORS.map(c=>`<span onclick="changePMColor(${i},'${c}')" style="width:14px;height:14px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${c===pm.c?'#fff':'transparent'};flex-shrink:0;transition:transform .1s" onmouseenter="this.style.transform='scale(1.2)'" onmouseleave="this.style.transform=''"></span>`).join('')}
+      </div>
+      <button onclick="deletePM(${i})" style="background:none;border:none;color:#333;cursor:pointer;font-size:16px;padding:2px 4px;border-radius:4px;transition:all .15s" onmouseenter="this.style.color='#f05252';this.style.background='#3a1010'" onmouseleave="this.style.color='#333';this.style.background='none'" title="Eliminar PM">✕</button>
+    </div>`).join('');
+}
+
+function addPM(){
+  const inp=document.getElementById('pm-new-name');
+  const name=inp.value.trim().toUpperCase();
+  if(!name)return;
+  if(PMS.find(p=>p.id===name)){alert('Ya existe un PM con ese nombre.');return;}
+  const color=PM_COLORS[PMS.length%PM_COLORS.length];
+  const initials=name.length>=2?name.slice(0,2):name.padEnd(2,'·');
+  PMS.push({id:name,i:initials,c:color});
+  savePMS();
+  inp.value='';
+  renderPMAdmin();
+  renderTasks();
+}
+
+function deletePM(idx){
+  const pm=PMS[idx];
+  if(!confirm('¿Eliminar a '+pm.id+'? Sus tareas se conservan pero dejarán de verse.'))return;
+  PMS.splice(idx,1);
+  savePMS();
+  if(ePM===pm.id&&PMS.length)ePM=PMS[0].id;
+  renderPMAdmin();
+  renderTasks();
+}
+
+function changePMColor(idx,color){
+  PMS[idx].c=color;
+  savePMS();
+  renderPMAdmin();
+  renderTasks();
+  renderP0();
+}
+
+// ── COORDINACIÓN (vista privada) ─────────────────────────────────────
+function openCoord(el){
+  const pwd=prompt('Contraseña:');
+  if(pwd===null)return;
+  if(pwd!=='Gaya1989'){alert('Contraseña incorrecta.');return;}
+  goPage('coord',el);
+  renderCoord();
+}
+
+function renderCoord(){
+  const el=document.getElementById('coord-content');
+  if(!el)return;
+  const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Recopilar todas las tareas HECHO de todos los PMs
+  const done=Object.entries(tasks).flatMap(([pm,ts])=>
+    ts.filter(t=>t.status==='HECHO').map(t=>({...t,pm}))
+  );
+
+  if(!done.length){
+    el.innerHTML='<div style="color:#333;text-align:center;padding:3rem;font-size:14px">Sin tareas concluidas aún.</div>';
+    return;
+  }
+
+  // Agrupar por mes de completado
+  const byM={};
+  done.forEach(t=>{
+    const d=t.completedAt?new Date(t.completedAt):null;
+    const key=d?(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0')):'9999-12';
+    if(!byM[key])byM[key]=[];
+    byM[key].push(t);
+  });
+
+  const mKeys=Object.keys(byM).sort((a,b)=>b.localeCompare(a));
+
+  el.innerHTML=mKeys.map(mk=>{
+    const list=byM[mk];
+    const isCol=secColl['coord_'+mk];
+    const mLabel=mk==='9999-12'?'Sin fecha de cierre':(()=>{
+      const yr=mk.split('-')[0];
+      const mo=parseInt(mk.split('-')[1]);
+      return MESES[mo]+' '+yr;
+    })();
+    return`<div style="margin-bottom:.8rem;border-radius:10px;overflow:hidden;border:0.5px solid #1a1a1a">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#111;cursor:pointer;user-select:none" onclick="secColl['coord_${mk}']=!secColl['coord_${mk}'];renderCoord()">
+        <div style="width:8px;height:8px;border-radius:50%;background:#4dd68a;flex-shrink:0"></div>
+        <div style="font-size:13px;font-weight:600;color:#aaa;flex:1">${mLabel}</div>
+        <span style="font-size:11px;color:#444;background:#0e0e0e;padding:2px 8px;border-radius:20px;border:0.5px solid #1e1e1e">${list.length} tarea${list.length!==1?'s':''}</span>
+        <i class="ti ti-chevron-right" style="color:#333;font-size:13px;transform:${isCol?'':'rotate(90deg)'};transition:transform .2s"></i>
+      </div>
+      ${isCol?'':'<div>'+
+        '<div style="display:grid;grid-template-columns:1fr 80px 90px 90px 80px;gap:0;padding:6px 16px;background:#0a0a0a;border-bottom:0.5px solid #161616">'+
+          ['Actividad','PM','Proyecto','Hito','Completada'].map(h=>`<span style="font-size:10px;color:#333;font-weight:600;text-transform:uppercase;letter-spacing:.06em">${h}</span>`).join('')+
+        '</div>'+
+        list.map(t=>{
+          const pmColor=pmC(t.pm)||'#444';
+          const d=t.completedAt?new Date(t.completedAt):null;
+          const fch=d?fDT(d):'—';
+          return`<div style="display:grid;grid-template-columns:1fr 80px 90px 90px 80px;gap:0;padding:8px 16px;border-bottom:0.5px solid #141414;align-items:center" onmouseenter="this.style.background='#141414'" onmouseleave="this.style.background=''">
+            <span style="font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-decoration:line-through;text-decoration-color:#2a2a2a">${t.actividad}</span>
+            <span style="display:flex;align-items:center;gap:5px">
+              <span style="width:18px;height:18px;border-radius:5px;background:${pmColor}22;color:${pmColor};font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${t.pm?t.pm.slice(0,2):'??'}</span>
+              <span style="font-size:11px;color:#555">${t.pm?t.pm.charAt(0)+t.pm.slice(1).toLowerCase():'—'}</span>
+            </span>
+            <span style="font-size:11px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.proyecto||'—'}</span>
+            <span>${hChip(t,t.pm)}</span>
+            <span style="font-size:10px;color:#333">${fch}</span>
+          </div>`;
+        }).join('')+
+      '</div>'}
+    </div>`;
+  }).join('');
+}
+
+</script>
+</body>
+</html>
