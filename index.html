@@ -468,7 +468,10 @@ let activeDD=null;
 
 const PMS_DEFAULT=[{id:'PAOLA',i:'PA',c:'#C4622D'},{id:'MINERVA',i:'MI',c:'#7A9E87'},{id:'NACHO',i:'NA',c:'#7A9EC4'},{id:'FANNY',i:'FA',c:'#C4A862'},{id:'DULCE',i:'DU',c:'#9E7AC4'}];
 let PMS=JSON.parse(localStorage.getItem('ktk_pms')||'null')||PMS_DEFAULT;
-function savePMS(){localStorage.setItem('ktk_pms',JSON.stringify(PMS));}
+function savePMS(){
+  localStorage.setItem('ktk_pms',JSON.stringify(PMS));
+  if(window.SB)PMS.forEach(pm=>window.SB.from('pms').upsert({id:pm.id,iniciales:pm.i,color:pm.c}));
+}
 const PC=['#C4622D','#7A9E87','#7A9EC4','#C4A862','#9E7AC4','#C47A7A','#62C4A8','#A8C462','#C462A8','#629EC4'];
 const pcM={};
 
@@ -490,12 +493,36 @@ async function syncProjects(){
   try{
     for(const p of projects){
       const row={nombre:p.nombre,pm:p.pm||null,tipo:p.tipo||null,ciudad:p.ciudad||null,inicio:p.inicio||null,cierre:p.cierre||null,status:p.status||'ABIERTO',hitos:p.hitos||{}};
-      if(p.id&&Number(p.id)<2000000000){await window.SB.from('projects').update(row).eq('id',p.id);}
-      else{const {data}=await window.SB.from('projects').insert(row).select().single();if(data){p.id=data.id;try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}}}
+      if(p.id&&Number(p.id)<2000000000){
+        // ID del seed: intentar update, si no existe hacer insert
+        const {error}=await window.SB.from('projects').upsert({id:p.id,...row});
+        if(error)console.warn('upsert project:',error);
+      } else {
+        const {data}=await window.SB.from('projects').insert(row).select().single();
+        if(data){p.id=data.id;try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}}
+      }
     }
   }catch(e){console.warn('sync projects:',e);}
 }
-function saveT(){try{localStorage.setItem('ktk_t2',JSON.stringify(tasks));}catch(e){}}
+function saveT(){
+  try{localStorage.setItem('ktk_t2',JSON.stringify(tasks));}catch(e){}
+  syncTasks();
+}
+async function syncTasks(){
+  if(!window.SB)return;
+  try{
+    const all=Object.entries(tasks).flatMap(([pm,ts])=>ts.map(t=>({pm,t})));
+    for(const {pm,t} of all){
+      const row={pm,proyecto:t.proyecto||null,actividad:t.actividad,hito:t.hito||'OBRA',prioridad:t.prioridad||'MEDIA',fecha:t.fecha||null,status:t.status||'ACTIVO',orden:t.orden||0,completed_at:t.completedAt||null};
+      if(t.id&&Number(t.id)<2000000000){
+        await window.SB.from('tasks').upsert({id:t.id,...row});
+      } else {
+        const {data}=await window.SB.from('tasks').insert(row).select().single();
+        if(data)t.id=data.id;
+      }
+    }
+  }catch(e){console.warn('sync tasks:',e);}
+}
 
 // ── COMENTARIOS ──────────────────────────────────────────────────────────
 let comments={};
@@ -1405,6 +1432,12 @@ async function loadFromSupabase(){
     if(pData&&pData.length){
       projects=pData.map(p=>({id:p.id,nombre:p.nombre,pm:p.pm,tipo:p.tipo,ciudad:p.ciudad,inicio:p.inicio,cierre:p.cierre,status:p.status,hitos:p.hitos||{}}));
       try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}
+    } else if(projects.length){
+      // Supabase vacío — subir datos locales
+      console.log('Supabase vacío, subiendo datos locales...');
+      await syncProjects();
+      await syncTasks();
+      if(window.SB)PMS.forEach(pm=>window.SB.from('pms').upsert({id:pm.id,iniciales:pm.i,color:pm.c}));
     }
     if(tData&&tData.length){
       const g={};
