@@ -1434,6 +1434,8 @@ async function reloadFromSB(btn){
   // Limpiar localStorage para forzar carga desde Supabase
   try{localStorage.removeItem('ktk_p2');localStorage.removeItem('ktk_t2');localStorage.removeItem('ktk_pms');}catch(e){}
   await loadFromSupabase();
+// Auto-refresh cada 60 segundos
+setInterval(loadFromSupabase, 60000);
   if(icon)icon.style.animation='';
 }
 
@@ -1444,43 +1446,28 @@ async function loadFromSupabase(){
       window.SB.from('tasks').select('*').order('orden'),
       window.SB.from('pms').select('*')
     ]);
-
     if(pData&&pData.length){
-      // Supabase tiene datos — SIEMPRE usar estos, ignorar localStorage
       projects=pData.map(p=>({id:p.id,nombre:p.nombre,pm:p.pm,tipo:p.tipo,ciudad:p.ciudad,inicio:p.inicio,cierre:p.cierre,status:p.status,hitos:p.hitos||{}}));
       try{localStorage.setItem('ktk_p2',JSON.stringify(projects));}catch(e){}
     } else if(projects.length){
-      // Supabase vacío — subir datos locales (solo primera vez)
-      console.log('Supabase vacío, subiendo datos locales...');
       await syncProjects();
       await syncTasks();
       if(window.SB)PMS.forEach(pm=>window.SB.from('pms').upsert({id:pm.id,iniciales:pm.i,color:pm.c}));
     }
-
     if(tData&&tData.length){
-      // SIEMPRE usar tareas de Supabase — reemplaza todo lo local
       const g={};
-      tData.forEach(t=>{
-        const pm=t.pm||'SIN_PM';
-        if(!g[pm])g[pm]=[];
-        g[pm].push({id:t.id,proyecto:t.proyecto,actividad:t.actividad,hito:t.hito,prioridad:t.prioridad,fecha:t.fecha,status:t.status,orden:t.orden||0,completedAt:t.completed_at});
-      });
+      tData.forEach(t=>{const pm=t.pm||'SIN_PM';if(!g[pm])g[pm]=[];g[pm].push({id:t.id,proyecto:t.proyecto,actividad:t.actividad,hito:t.hito,prioridad:t.prioridad,fecha:t.fecha,status:t.status,orden:t.orden||0,completedAt:t.completed_at});});
       tasks=g;
       try{localStorage.setItem('ktk_t2',JSON.stringify(tasks));}catch(e){}
-    } else {
-      // Supabase sin tareas — subir las locales
-      if(Object.values(tasks).some(a=>a&&a.length)) await syncTasks();
+    } else if(Object.values(tasks).some(a=>a&&a.length)){
+      await syncTasks();
     }
-
     if(pmData&&pmData.length){
       PMS=pmData.map(p=>({id:p.id,i:p.iniciales,c:p.color}));
       try{localStorage.setItem('ktk_pms',JSON.stringify(PMS));}catch(e){}
     }
-
-    // Refrescar toda la UI con datos de Supabase
     buildUI();
     renderDash();renderP0();renderTasks();buildNotifications();
-    console.log('Supabase cargado:', projects.length, 'proyectos');
   }catch(e){console.warn('Supabase load:',e);}
 }
 loadFromSupabase();
